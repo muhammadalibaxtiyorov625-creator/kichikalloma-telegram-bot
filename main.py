@@ -43,23 +43,19 @@ async def start_web_server():
         logger.warning(f"Web serverni ishga tushirishda ogohlantirish: {e}")
 
 async def setup_bot_commands(bot: Bot) -> None:
-    """Telegramning pastki chap burchagidagi doimiy Menu tugmasiga Mini App ni o'rnatish"""
+    """Telegramning pastki chap burchagidagi standart Menu [/] tugmasi va komandalarini o'rnatish"""
     try:
-        # 1. Pastdagi asosiy Menu tugmasini to'g'ridan-to'g'ri Mini App ga aylantirish
-        await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(
-                text="🚀 Kichik Alloma AI",
-                web_app=WebAppInfo(url=DEFAULT_WEBAPP_URL)
-            )
-        )
-        # 2. Komandalar ro'yxati
+        # 1. Pastdagi asosiy Menu [/] tugmasini standart holatga qaytarish
+        from aiogram.types import MenuButtonCommands
+        await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+        # 2. Komandalar ro'yxati (/start, /help, /settings)
         commands = [
             BotCommand(command="start", description="🔄 Boshlash / Yangilash"),
             BotCommand(command="help", description="🆘 Yordam va adminga yozish"),
             BotCommand(command="settings", description="⚙️ Sozlamalar va til tanlash"),
         ]
         await bot.set_my_commands(commands=commands, scope=BotCommandScopeDefault())
-        logger.info("Bot komandalar menyusi va Mini App Menu tugmasi muvaffaqiyatli o'rnatildi.")
+        logger.info("Bot komandalar menyusi (Menu [/]) muvaffaqiyatli o'rnatildi.")
     except Exception as e:
         logger.warning(f"Buyruqlar menyusini o'rnatishda xatolik: {e}")
 

@@ -2,7 +2,7 @@ import json
 import logging
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 
 from states import SupportState
@@ -226,20 +226,90 @@ async def startup_info_handler(message: Message) -> None:
     )
     await message.answer(info_text, reply_markup=get_main_keyboard(lang), parse_mode="HTML")
 
-# Boshqa xabarlar
-@router.message()
+# Boshqa barcha erkin savol va xabarlar (AI orqali aqlli javob va ElevenLabs jonli ovoz)
+@router.message(F.text)
 async def default_message_handler(message: Message) -> None:
     user_id = message.from_user.id
     lang = get_user_lang(user_id)
     t = TEXTS.get(lang, TEXTS["uz"])
-    user_text = (message.text or "").lower()
+    user_text = message.text.strip()
+    user_text_lower = user_text.lower()
 
-    if any(k in user_text for k in ["startup", "loyiha", "sayyora", "shoxrux", "asoschi", "vikipediya", "alloma"]):
+    if any(k in user_text_lower for k in ["startup", "loyiha", "sayyora", "shoxrux", "asoschi", "vikipediya"]):
         await startup_info_handler(message)
         return
 
+    # AI orqali javob olish
+    ai_reply = None
+    try:
+        from gemini_ai import ask_gemini
+        ai_reply = ask_gemini(user_text)
+    except Exception as e:
+        logger.warning(f"AI so'rovida xatolik: {e}")
+
+    if not ai_reply:
+        ai_reply = f"Salom! <b>Kichik Alloma</b> ovozli Mini Appiga kirish uchun <b>'{t['btn_chat']}'</b> tugmasini bosing! 🎙️✨"
+
+    # 1. Matnli javobni yuborish
     await message.answer(
-        f"Salom! <b>Kichik Alloma</b> ovozli Mini Appiga kirish uchun <b>'{t['btn_chat']}'</b> tugmasini bosing! 🎙️✨",
+        ai_reply,
+        reply_markup=get_main_keyboard(lang),
+        parse_mode="HTML"
+    )
+
+    # 2. ElevenLabs orqali jonli inson ovozida gapirish
+    try:
+        import os
+        from elevenlabs_service import generate_voice
+        audio_path = f"ai_voice_{user_id}.mp3"
+        audio_file = generate_voice(ai_reply, output_path=audio_path)
+        if audio_file and os.path.exists(audio_file):
+            await message.answer_voice(
+                voice=FSInputFile(audio_file),
+                caption="🎙️ <i>Kichik Alloma AI ovozi</i>",
+                parse_mode="HTML"
+            )
+            # Faylni tozalash
+            try:
+                os.remove(audio_file)
+            except Exception:
+                pass
+    except Exception as err:
+        logger.warning(f"ElevenLabs TTS yuborishda xatolik: {err}")
+
+
+# Ovozli xabarlar kelganda yoki /voice komandasi
+@router.message(Command("voice"))
+@router.message(Command("ovoz"))
+@router.message(F.voice)
+async def default_voice_handler(message: Message) -> None:
+    user_id = message.from_user.id
+    lang = get_user_lang(user_id)
+    t = TEXTS.get(lang, TEXTS["uz"])
+    
+    try:
+        import os
+        from elevenlabs_service import generate_voice
+        voice_text = "Salom, qadrdon kichik allomam! Men sizning sun'iy intellekt ustozi va do'stingizman. Menga xohlagan savolingizni bering, barchasiga jonli ovozda javob beraman!"
+        audio_path = f"voice_intro_{user_id}.mp3"
+        audio_file = generate_voice(voice_text, output_path=audio_path)
+        if audio_file and os.path.exists(audio_file):
+            await message.answer_voice(
+                voice=FSInputFile(audio_file),
+                caption=f"🎙️ <b>Kichik Alloma AI (Jonli ovoz):</b>\n\n{voice_text}\n\nMini App orqali to'liq suhbatlashish uchun <b>'{t['btn_chat']}'</b> tugmasini bosing! 🌟",
+                reply_markup=get_main_keyboard(lang),
+                parse_mode="HTML"
+            )
+            try:
+                os.remove(audio_file)
+            except Exception:
+                pass
+            return
+    except Exception as e:
+        logger.warning(f"Voice generation error: {e}")
+
+    await message.answer(
+        f"Ovozli xabaringiz qabul qilindi! 🎙️✨\n\nJonli ovozli suhbatlashish uchun pastdagi <b>'{t['btn_chat']}'</b> tugmasini bosing!",
         reply_markup=get_main_keyboard(lang),
         parse_mode="HTML"
     )
