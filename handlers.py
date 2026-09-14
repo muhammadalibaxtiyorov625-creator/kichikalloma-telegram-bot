@@ -287,10 +287,76 @@ async def default_voice_handler(message: Message) -> None:
     lang = get_user_lang(user_id)
     t = TEXTS.get(lang, TEXTS["uz"])
     
+    # 1. Agar foydalanuvchi ovozli xabar yuborgan bo'lsa (F.voice)
+    if message.voice:
+        local_ogg = f"user_voice_{user_id}_{message.message_id}.ogg"
+        try:
+            import os
+            from elevenlabs_service import transcribe_voice, generate_voice
+            from gemini_ai import ask_gemini
+
+            # Telegramdan ovoz faylini yuklab olish
+            file_info = await message.bot.get_file(message.voice.file_id)
+            await message.bot.download_file(file_info.file_path, local_ogg)
+
+            # ElevenLabs Scribe orqali tinglash (STT)
+            user_spoken_text = transcribe_voice(local_ogg)
+
+            # Yuklangan ovoz faylini o'chirish
+            if os.path.exists(local_ogg):
+                try:
+                    os.remove(local_ogg)
+                except Exception:
+                    pass
+
+            if user_spoken_text and len(user_spoken_text.strip()) > 1:
+                # AI orqali aqlli va to'liq javob olish
+                ai_reply = ask_gemini(user_spoken_text)
+
+                reply_caption = (
+                    f"👂 <b>Sizni eshitdim:</b> <i>\"{user_spoken_text}\"</i>\n\n"
+                    f"{ai_reply}"
+                )
+
+                # Matnli javob
+                await message.answer(
+                    reply_caption,
+                    reply_markup=get_main_keyboard(lang),
+                    parse_mode="HTML"
+                )
+
+                # ElevenLabs orqali jonli ovozda qaytarish
+                reply_audio_path = f"ai_voice_reply_{user_id}.mp3"
+                audio_file = generate_voice(ai_reply, output_path=reply_audio_path)
+                if audio_file and os.path.exists(audio_file):
+                    await message.answer_voice(
+                        voice=FSInputFile(audio_file),
+                        caption="🎙️ <i>Kichik Alloma AI javobi</i>",
+                        parse_mode="HTML"
+                    )
+                    try:
+                        os.remove(audio_file)
+                    except Exception:
+                        pass
+                return
+
+        except Exception as err:
+            logger.warning(f"Ovozli xabarni qayta ishlashda xatolik: {err}")
+            if os.path.exists(local_ogg):
+                try:
+                    os.remove(local_ogg)
+                except Exception:
+                    pass
+
+    # 2. Agar /voice yoki /ovoz komandasi bo'lsa yoki ovoz tanilmasa
     try:
         import os
         from elevenlabs_service import generate_voice
-        voice_text = "Salom, qadrdon kichik allomam! Men sizning sun'iy intellekt ustozi va do'stingizman. Menga xohlagan savolingizni bering, barchasiga jonli ovozda javob beraman!"
+        voice_text = (
+            "Salom, qadrdon kichik allomam! Men sizning sun'iy intellekt ustozi va do'stingizman. "
+            "Menga xohlagan savolingizni ovozli xabar orqali yuboring, barchasini diqqat bilan eshitib, "
+            "inson ovozida batafsil javob beraman!"
+        )
         audio_path = f"voice_intro_{user_id}.mp3"
         audio_file = generate_voice(voice_text, output_path=audio_path)
         if audio_file and os.path.exists(audio_file):

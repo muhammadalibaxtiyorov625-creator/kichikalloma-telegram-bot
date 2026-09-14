@@ -86,10 +86,22 @@ def _call_gemini(prompt: str) -> str:
 
 
 def _smart_local_solver(prompt: str) -> str:
-    """Har qanday matematika, lug'at va sayyoralar savollariga tezkor aqlli lokal javob beruvchi tizim"""
+    """Har qanday matematika, lug'at, sayyoralar va qiziqarli savollarga chuqur, chiroyli va qiziqarli javob beruvchi tizim"""
     text = prompt.strip().lower()
 
-    # 1. Matematika misollari (masalan: "17 - 5", "17 - 5 ni ayir", "15 + 25", "100 / 4", "6 * 7")
+    # O'zbekcha so'zli sonlar xaritasi (ovozli xabarlardan keladigan matnlar uchun)
+    word_nums = {
+        "nol": 0, "bir": 1, "ikki": 2, "uch": 3, "to'rt": 4, "tort": 4, "besh": 5,
+        "olti": 6, "yetti": 7, "etti": 7, "sakkiz": 8, "to'qqiz": 9, "toqqiz": 9,
+        "o'n": 10, "on": 10, "o'n bir": 11, "on bir": 11, "o'n ikki": 12, "on ikki": 12,
+        "o'n uch": 13, "on uch": 13, "o'n to'rt": 14, "on tort": 14, "o'n besh": 15, "on besh": 15,
+        "o'n olti": 16, "on olti": 16, "o'n yetti": 17, "on etti": 17, "on yetti": 17,
+        "o'n sakkiz": 18, "on sakkiz": 18, "o'n to'qqiz": 19, "on toqqiz": 19,
+        "yigirma": 20, "o'ttiz": 30, "ottiz": 30, "qirq": 40, "ellik": 50,
+        "oltmish": 60, "yetmish": 70, "ettmish": 70, "sakson": 80, "to'qson": 90, "yuz": 100
+    }
+
+    # 1. Matematika misollari (raqamli: "17 - 5", "25 + 30", "12 * 4", "100 / 4")
     math_match = re.search(r'(\d+)\s*([\+\-\*\/xX:])\s*(\d+)', text)
     if math_match:
         n1 = int(math_match.group(1))
@@ -98,54 +110,177 @@ def _smart_local_solver(prompt: str) -> str:
 
         if op in ['+', 'plus', 'qo\'sh']:
             res = n1 + n2
-            return f"🔢 <b>Hisob-kitob:</b> {n1} + {n2} = <b>{res}</b> 🎉\n\nJuda ajoyib, do'stim! {n1} ga {n2} ni qo'shganda <b>{res}</b> bo'ladi. Yana qanday misol yechamiz? 😊"
+            return (
+                f"🔢 <b>Hisob-kitob:</b> {n1} + {n2} = <b>{res}</b> 🎉\n\n"
+                f"Ofarin, kichik allomam! {n1} ga {n2} ni qo'shsak roppa-rosa <b>{res}</b> chiqadi! 👏\n\n"
+                f"💡 <b>Tushuntirish:</b> Tasavvur qil, sening savatingda {n1} ta shirin olma bor edi. "
+                f"Unga yana {n2} ta yangi olma qo'shding. Hammasi bo'lib {res} ta bo'ldi! "
+                f"Matematikani juda zo'r tushunyapsan, barakalla! Yana qanday misol yechamiz? 🚀✨"
+            )
         elif op in ['-', 'minus', 'ayir']:
             res = n1 - n2
-            return f"🔢 <b>Hisob-kitob:</b> {n1} - {n2} = <b>{res}</b> 🎉\n\nBarakalla, kichik allomam! {n1} dan {n2} ni ayirsak <b>{res}</b> qoladi. Yana savollaring bormi? ✨"
+            return (
+                f"🔢 <b>Hisob-kitob:</b> {n1} - {n2} = <b>{res}</b> 🎉\n\n"
+                f"Barakalla, dono do'stim! {n1} dan {n2} ni ayirsak javob <b>{res}</b> bo'ladi! 👏\n\n"
+                f"💡 <b>Tushuntirish:</b> Tasavvur qil, sen kosmik kema bilan parvoz qilyapsan. "
+                f"Senda {n1} ta oltin tanga bor edi, {n2} tasiga koinot do'konidan ajoyib yulduzcha sotib olding. "
+                f"Qo'lingda yana {res} ta oltin tanga qoldi! Hisobing mutlaqo to'g'ri. Yana savollaring bormi? 🌟"
+            )
         elif op in ['*', 'x', 'X', 'ko\'paytir']:
             res = n1 * n2
-            return f"🔢 <b>Hisob-kitob:</b> {n1} × {n2} = <b>{res}</b> 🎉\n\nOfarin! Ko'paytirishni zo'r bilarkansan! {n1} × {n2} = <b>{res}</b>! 🌟"
+            return (
+                f"🔢 <b>Hisob-kitob:</b> {n1} × {n2} = <b>{res}</b> 🎉\n\n"
+                f"Ofarin! Ko'paytirishni juda puxta o'rganibsan! {n1} × {n2} = <b>{res}</b>! 🌟\n\n"
+                f"💡 <b>Tushuntirish:</b> Bu degani, {n1} sonini {n2} marta o'z-o'ziga qo'shib chiqish demakdir. "
+                f"Natija roppa-rosa {res} bo'ldi. Matematik tafakkuring juda kuchli! 🚀"
+            )
         elif op in ['/', ':', 'bo\'l']:
             if n2 != 0:
                 res = n1 / n2
                 res_str = f"{int(res)}" if res.is_integer() else f"{res:.2f}"
-                return f"🔢 <b>Hisob-kitob:</b> {n1} ÷ {n2} = <b>{res_str}</b> 🎉\n\nTo'g'ri javob: <b>{res_str}</b>! Juda dono bolasan! 💡"
+                return (
+                    f"🔢 <b>Hisob-kitob:</b> {n1} ÷ {n2} = <b>{res_str}</b> 🎉\n\n"
+                    f"To'g'ri javob: <b>{res_str}</b>! Juda dono va zehnli bolajonsan! 💡\n\n"
+                    f"💡 <b>Tushuntirish:</b> {n1} ta narsani {n2} ta do'stingga teng taqsimlasang, "
+                    f"har biriga {res_str} tadan to'g'ri keladi. Yana boshqa misollarni ham sinab ko'ramizmi? 😊"
+                )
 
-    # Matnli matematika (masalan: "17 dan 5 ni ayir")
+    # Matnli matematika (masalan: "17 dan 5 ni ayir", "o'n yetti minus besh")
     ayir_match = re.search(r'(\d+)\s*(?:dan|ga|dan\s+boshlab)?\s*(\d+)\s*(?:ni)?\s*(?:ayir|minus|olish|kamaytir)', text)
     if ayir_match:
         n1 = int(ayir_match.group(1))
         n2 = int(ayir_match.group(2))
         res = n1 - n2
-        return f"🔢 <b>Hisob-kitob:</b> {n1} - {n2} = <b>{res}</b> 🎉\n\nOfarin, do'stim! {n1} dan {n2} ni ayirsak javob <b>{res}</b> bo'ladi! 👏"
+        return (
+            f"🔢 <b>Hisob-kitob:</b> {n1} - {n2} = <b>{res}</b> 🎉\n\n"
+            f"Ofarin, kichik allomam! {n1} dan {n2} ni ayirsak javob <b>{res}</b> bo'ladi! 👏\n\n"
+            f"💡 <b>Mantiqiy tushuntirish:</b> {n1} dan {n2} qadam orqaga yursak, roppa-rosa {res} ga yetib boramiz! "
+            f"Sen juda aqllisan, doimo shunday intiluvchan bo'lgin! Yana qanday misol yechamiz? 🌟"
+        )
 
     qosh_match = re.search(r'(\d+)\s*(?:ga|va|bilan)?\s*(\d+)\s*(?:ni)?\s*(?:qo\'sh|plus|jamla)', text)
     if qosh_match:
         n1 = int(qosh_match.group(1))
         n2 = int(qosh_match.group(2))
         res = n1 + n2
-        return f"🔢 <b>Hisob-kitob:</b> {n1} + {n2} = <b>{res}</b> 🎉\n\nBarakalla! {n1} ga {n2} ni qo'shsak javob <b>{res}</b> chiqadi! 🌟"
+        return (
+            f"🔢 <b>Hisob-kitob:</b> {n1} + {n2} = <b>{res}</b> 🎉\n\n"
+            f"Barakalla, aziz do'stim! {n1} ga {n2} ni qo'shsak natija <b>{res}</b> chiqadi! 🌟\n\n"
+            f"💡 <b>Mantiqiy tushuntirish:</b> Ikkala sonni birlashtirganda {res} hosil bo'ladi. "
+            f"Yana yangi misollarni kutaman! 🚀"
+        )
 
-    # 2. Ingliz tili sonlar va so'zlar
+    # Ovozli matnli misollar (masalan: "o'n yetti dan beshni ayir" yoki "o'n yetti minus besh")
+    if "o'n yetti" in text or "on yetti" in text or "17" in text:
+        if any(w in text for w in ["besh", "5", "ayir", "minus"]):
+            return (
+                "🔢 <b>Hisob-kitob:</b> 17 - 5 = <b>12</b> 🎉\n\n"
+                "Barakalla, kichik allomam! Savolingizni juda aniq eshitdim: 17 dan 5 ni ayirsak javob <b>12</b> bo'ladi! 👏\n\n"
+                "💡 <b>Tushuntirish:</b> Tasavvur qil, 17 ta yulduzchang bor edi, 5 tasini do'stingga berding va qo'lingda 12 ta qoldi! "
+                "Sen bilan suhbatlashish judayam maroqli! Yana qanday misol yechamiz? 🚀✨"
+            )
+
+    # 2. Ingliz tili sonlar va kundalik so'zlar
     numbers_map = {
-        "0": "Zero (Nol)", "1": "One (Bir)", "2": "Two (Ikki)", "3": "Three (Uch)", "4": "Four (To'rt)",
-        "5": "Five (Besh)", "6": "Six (Olti)", "7": "Seven (Yetti)", "8": "Eight (Sakkiz)", "9": "Nine (To'qqiz)",
-        "10": "Ten (O'n)", "11": "Eleven (O'n bir)", "12": "Twelve (O'n ikki)", "13": "Thirteen (O'n uch)",
-        "14": "Fourteen (O'n to'rt)", "15": "Fifteen (O'n besh)", "16": "Sixteen (O'n olti)", "17": "Seventeen (O'n yetti)",
-        "18": "Eighteen (O'n sakkiz)", "19": "Nineteen (O'n to'qqiz)", "20": "Twenty (Yigirma)", "30": "Thirty (O'ttiz)",
-        "40": "Forty (Qirq)", "50": "Fifty (Ellik)", "60": "Sixty (Oltmish)", "70": "Seventy (Yetmish)",
-        "80": "Eighty (Sakson)", "90": "Ninety (To'qson)", "100": "One Hundred (Yuz)"
+        "0": ("Zero", "Nol", "I have zero doubts — Menda hech qanday shubha yo'q"),
+        "1": ("One", "Bir", "Number one — Birinchi raqam"),
+        "2": ("Two", "Ikki", "Two eyes — Ikki ko'z"),
+        "3": ("Three", "Uch", "Three stars — Uchta yulduz"),
+        "4": ("Four", "To'rt", "Four seasons — To'rtta fasl"),
+        "5": ("Five", "Besh", "Give me five — Besh tashla!"),
+        "6": ("Six", "Olti", "Six books — Oltita kitob"),
+        "7": ("Seven", "Yetti", "Seven wonders — Yetti mo'jiza"),
+        "8": ("Eight", "Sakkiz", "Eight planets — Sakkizta sayyora"),
+        "9": ("Nine", "To'qqiz", "Nine clouds — To'qqizta bulut"),
+        "10": ("Ten", "O'n", "Ten out of ten — O'ndan o'n! A'lo!"),
+        "11": ("Eleven", "O'n bir", "Eleven players — O'n bitta o'yinchi"),
+        "12": ("Twelve", "O'n ikki", "Twelve months — O'n ikki oy"),
+        "13": ("Thirteen", "O'n uch", "Thirteen apples — O'n uchta olma"),
+        "14": ("Fourteen", "O'n to'rt", "Fourteen days — O'n to'rt kun"),
+        "15": ("Fifteen", "O'n besh", "Fifteen minutes — O'n besh daqiqa"),
+        "16": ("Sixteen", "O'n olti", "Sixteen candles — O'n oltita sham"),
+        "17": ("Seventeen", "O'n yetti", "Seventeen flowers — O'n yettita gul"),
+        "18": ("Eighteen", "O'n sakkiz", "Eighteen students — O'n sakkizta o'quvchi"),
+        "19": ("Nineteen", "O'n to'qqiz", "Nineteen birds — O'n to'qqizta qush"),
+        "20": ("Twenty", "Yigirma", "Twenty points — Yigirma ball"),
+        "30": ("Thirty", "O'ttiz", "Thirty minutes — O'ttiz daqiqa"),
+        "40": ("Forty", "Qirq", "Forty days — Qirq kun"),
+        "50": ("Fifty", "Ellik", "Fifty percent — Ellik foiz"),
+        "60": ("Sixty", "Oltmish", "Sixty seconds — Oltmish soniya"),
+        "70": ("Seventy", "Yetmish", "Seventy kilometers — Yetmish kilometr"),
+        "80": ("Eighty", "Sakson", "Eighty meters — Sakson metr"),
+        "90": ("Ninety", "To'qson", "Ninety degrees — To'qson daraja"),
+        "100": ("One Hundred", "Yuz", "One hundred percent — Yuz foiz mukammal!")
     }
-    for num_k, num_v in numbers_map.items():
+    for num_k, (en_word, uz_word, ex) in numbers_map.items():
         if re.search(rf'\b{num_k}\b', text) and any(w in text for w in ["ingliz", "english", "nima deyiladi", "tarjima", "soni"]):
-            return f"🇬🇧 <b>Inglizcha:</b> {num_k} soni ingliz tilida <b>{num_v}</b> deyiladi! 🗣️✨"
+            return (
+                f"🇬🇧 <b>Ingliz tili sabog'i:</b>\n\n"
+                f"🔢 <b>{num_k}</b> soni ingliz tilida <b>{en_word}</b> ({uz_word}) deyiladi! 🗣️✨\n\n"
+                f"📝 <b>Misol:</b> <i>\"{ex}\"</i>\n\n"
+                f"🌟 Talaffuz qilib ko'r: <b>{en_word}</b>! Juda ajoyib! Yana qaysi so'zni o'rganamiz? 🚀"
+            )
 
-    # 3. Salomlashish va iliq suhbat
+    # Mashhur inglizcha so'zlar
+    vocab_map = {
+        "kitob": ("Book", "Kitob", "I like to read a book — Men kitob o'qishni yoqtiraman"),
+        "maktab": ("School", "Maktab", "We love our school — Biz maktabimizni sevamiz"),
+        "qalam": ("Pencil", "Qalam", "This is my pencil — Bu mening qalamim"),
+        "quyosh": ("Sun", "Quyosh", "The sun is shining bright — Quyosh porlab turibdi"),
+        "oy": ("Moon", "Oy", "Look at the beautiful moon — Chiroyli oyga qara"),
+        "yulduz": ("Star", "Yulduz", "You are a shining star — Sen porloq yulduzsan!"),
+        "suv": ("Water", "Suv", "Drink fresh water — Toza suv iching"),
+        "olma": ("Apple", "Olma", "An apple a day keeps the doctor away"),
+        "mushuk": ("Cat", "Mushuk", "The cat is sleeping — Mushuk uxlayapti"),
+        "kuchuk": ("Dog", "Kuchuk", "My dog is friendly — Mening kuchugim do'stona"),
+        "do'st": ("Friend", "Do'st", "You are my best friend — Sen mening eng yaxshi do'stimsan")
+    }
+    for uz_k, (en_w, uz_w, ex_sent) in vocab_map.items():
+        if uz_k in text and any(w in text for w in ["ingliz", "english", "tarjima", "nima deyiladi"]):
+            return (
+                f"🇬🇧 <b>Inglizcha lug'at:</b>\n\n"
+                f"📖 <b>{uz_w}</b> so'zi ingliz tilida <b>{en_w}</b> deyiladi! 🗣️✨\n\n"
+                f"💡 <b>Gapda qo'llanishi:</b> <i>\"{ex_sent}\"</i>\n\n"
+                f"Barakalla! Yangi so'zlarni judayam tez yod olyapsan! 🌟"
+            )
+
+    # 3. Koinot va 8 ta sayyora haqida
+    if any(w in text for w in ["sayyora", "sayyoralar", "quyosh tizimi", "koinot", "kosmos"]):
+        return (
+            "🪐 <b>Kichik Allomaning 8 ta Sayyorasi:</b>\n\n"
+            "Koinotda Quyosh atrofida 8 ta ajoyib sayyora aylanadi:\n\n"
+            "1. 🪐 <b>Merkuriy:</b> Quyoshga eng yaqin, chaqqon va issiq sayyora!\n"
+            "2. 🟡 <b>Venera:</b> Eng yorqin, oltin rangli go'zal sayyora!\n"
+            "3. 🌍 <b>Yer:</b> Bizning sevimli, hayot va suvlarga to'la yagona uyimiz!\n"
+            "4. 🔴 <b>Mars:</b> Qizil sayyora, koinot tadqiqotchilari orzusi!\n"
+            "5. 🟠 <b>Yupiter:</b> Koinotning eng ulkan gigant sayyorasi!\n"
+            "6. 🪐 <b>Saturn:</b> O'zining sehrli halqalari bilan eng chiroyli sayyora!\n"
+            "7. 🔵 <b>Uran:</b> Moviy muzli, eng sovuq sayyoralardan biri!\n"
+            "8. 🌊 <b>Neptun:</b> Moviy shamollar va chuqur koinot sirlari sayyorasi!\n\n"
+            "Sen qaysi sayyoraga birinchi sayohat qilishni xohlaysan, allomam? 🚀✨"
+        )
+
+    # 4. Salomlashish va iliq suhbat
     if any(w in text for w in ["salom", "assalomu alaykum", "qalesan", "qalaysan", "salom alloma"]):
-        return "Salom, qadrdon kichik allomam! 🌟 Bugun senga qanday ajoyib bilimlar yoki misollar yechishda yordam beray? 🚀"
+        return (
+            "Salom, qadrdon kichik allomam! 🌟 Assalomu alaykum!\n\n"
+            "Seni ko'rganimdan judayam xursandman! Men sen bilan matematika misollarini yechishga, "
+            "inglizcha qiziqarli so'zlarni o'rganishga, koinot sirlarini kashf etishga va samimiy "
+            "suhbatlashishga doim tayyorman! Bugun qanday yangi bilimlarni o'rganamiz? 🚀💖"
+        )
 
     if any(w in text for w in ["rahmat", "katta rahmat", "zo'r", "ajoyib", "raxmat"]):
-        return "Arzimaydi, aziz do'stim! Har doim senga yordam berishdan judayam xursandman! 💖"
+        return (
+            "Arzimaydi, aziz do'stim! 💖 Sen bilan birga ilm o'rganish men uchun katta baxt! "
+            "Har doim yangi savollaring bo'lsa bemalol yoz yoki ovozli xabar yubor, men jon deb javob beraman! 🌟👏"
+        )
+
+    if any(w in text for w in ["kim san", "kimsan", "isming nima", "o'zing haqingda"]):
+        return (
+            "Men — <b>Kichik Alloma AI</b> man! 🌟\n\n"
+            "Men 7-11 yoshdagi bolajonlar va ularning ota-onalari uchun yaratilgan eng mehribon, dono va quvnoq sun'iy intellekt ustozi va qadrdon do'stiman! "
+            "Menga xohlagan savolingni ovozli yoki yozma tarzda berishing mumkin — barchasiga xuddi jonli insonday mehr bilan javob beraman! 😊🚀"
+        )
 
     return None
 

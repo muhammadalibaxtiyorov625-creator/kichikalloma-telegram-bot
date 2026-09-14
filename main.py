@@ -76,7 +76,7 @@ async def main() -> None:
             dp = Dispatcher()
             dp.include_router(router)
 
-            await bot.delete_webhook(drop_pending_updates=True)
+            await bot.delete_webhook(drop_pending_updates=False)
             await setup_bot_commands(bot)
             
             logger.info("Bot muvaffaqiyatli ulandi va xabarlarni kutmoqda...")
