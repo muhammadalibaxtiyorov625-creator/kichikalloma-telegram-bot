@@ -1148,6 +1148,25 @@
       // 0. AGAR AVVAL SAVOL BERILGAN BO'LSA (Matematika yoki Tarbiya viktorinasi)
       // =========================================================================
       if (pendingQuiz) {
+        if (pendingQuiz.type === 'math_lesson_1') {
+          if (lower.includes("374") || lower.includes("uch yuz yetmish to'rt") || lower.includes("uch yuz yetmish tort")) {
+            reply = `Barakalla, ${nm}! 🎉 Ofarin! 34 × 11 = 374 bo'ladi! 3 va 4 ning yig'indisi 7, uni o'rtasiga qo'ydingiz va darhol to'g'ri topdingiz! Siz ajoyib tez hisoblovchisiz! 🌟\n\nEndi 2-darsga o'tamizmi yoki boshqa biror misolni yechib ko'ramizmi? 😊🚀`;
+            uzText = "Ofarin! 34 × 11 = 374! To'g'ri topdingiz!";
+            audioKey = "custom";
+            pendingQuiz = null;
+            addAiMessage(reply, uzText, audioKey, true);
+            speakCustomText(reply);
+            return;
+          } else if (lower.includes("bilmayman") || lower.includes("qanday") || lower.includes("ayt")) {
+            reply = `Hechqisi yo'q, ${nm}! Keling birga qaraymiz: 3 va 4 ni qo'shamiz (3 + 4 = 7). Endi bu 7 ni 3 va 4 ning o'rtasiga qo'yamiz: 374 hosil bo'ladi! Qarang, qanchalik oson! 👏 Qani endi siz ayting-chi, 45 × 11 necha bo'ladi? 😉`;
+            uzText = "Qoidani eslaymiz: 34 × 11 = 374";
+            audioKey = "custom";
+            addAiMessage(reply, uzText, audioKey, true);
+            speakCustomText(reply);
+            return;
+          }
+        }
+
         if (pendingQuiz.type === 'math') {
           const userNum = parseUzbekNumber(clean);
           const isTen = userNum === 10 || clean.includes("10") || lower.includes("o'n") || lower.includes("on");
@@ -1207,11 +1226,22 @@
         return;
       }
 
-      // 2. MATEMATIKA DARSI SO'RALGANDA ("matematikadan dars o'tib ber", "matematika o'rgat")
+      // 2. MATEMATIKA DARSI SO'RALGANDA ("matematikadan dars o't", "0 dan 100 gacha matematika")
       // =========================================================================
       const isMathLessonReq = (lower.includes("matematik") || lower.includes("hisob") || lower.includes("arifmetik") || lower.includes("karra")) &&
                               (lower.includes("dars") || lower.includes("o't") || lower.includes("ot") || lower.includes("ber") || lower.includes("o'rgat") || lower.includes("orgat") || lower.includes("boshla") || lower.includes("o'rgan"));
       if (isMathLessonReq) {
+        pendingQuiz = { type: 'math_lesson_1', answer: 374 };
+        reply = `🔢 <b>Matematika Darsi: 0 dan 100% gacha mukammal o'rganamiz! 1-bosqich</b> 🪐✨\n\nAjoyib tanlov, ${nm}! Biz matematika darsimizni eng boshidan boshlaymiz: tez hisoblash sirlari, karra jadvali, darajalar va mantiqiy jumboqlarni birga zabt etamiz!\n\n💡 <b>1-dars siri: '11 ga tez ko'paytirish mo'jizasi'</b>\nHar qanday ikki xonali sonni 11 ga ko'paytirish uchun uning ikki chetidagi raqamlarini qo'shib, o'rtasiga yozing!\nMasalan: <b>25 × 11</b> bo'lsa, 2 va 5 ning yig'indisi 7. O'rtasiga qo'ysak: <b>275</b> bo'ladi! 👏\n\n🎯 <b>Siz uchun amaliy mashq:</b> <b>34 × 11</b> necha bo'ladi? Qani, hisoblab ko'ring-chi! 🚀✨`;
+        uzText = "Matematika: 0 dan 100% gacha 1-dars";
+        audioKey = "custom";
+        addAiMessage(reply, uzText, audioKey, true);
+        speakCustomText(reply);
+        return;
+      }
+
+      // Olma misoli so'ralganda ("olma", "5+5", "olmalar")
+      if (lower.includes("olma") && (lower.includes("misol") || lower.includes("hisob") || lower.includes("5") || lower.includes("besh"))) {
         pendingQuiz = { type: 'math', answer: 10 };
         reply = `Keling, birgalikda qiziqarli hisoblaymiz, ${nm}! 🍎\n\nTasavvur qiling, sizda 5 ta shirin olma bor edi, do'stingiz sizga yana 5 ta olma sovg'a qildi.\n\nQani, o'ylab ko'ring-chi, endi sizda jami nechta olma bo'ladi? Necha deb o'ylaysiz? 😊`;
         uzText = "Keling, birgalikda hisoblaymiz: 5 + 5 = ?";
