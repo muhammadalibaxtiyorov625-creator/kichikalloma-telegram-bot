@@ -40,6 +40,9 @@ TEXTS = {
         "btn_settings": "⚙️ Sozlamalar",
         "btn_help": "🆘 Yordam (/help)",
         "btn_close": "🔙 Yopish",
+        "btn_back": "🔙 Orqaga",
+        "btn_all_planets": "🪐 Barcha sayyoralar",
+        "back_to_main_msg": "🏠 <b>Asosiy menyudasiz!</b> Savol berishingiz yoki darslarni davom ettirishingiz mumkin 😊",
         "input_placeholder": "Savol yozing yoki bo'limni tanlang...",
         "lang_changed_msg": (
             "🇺🇿 <b>O'zbek tili muvaffaqiyatli tanlandi!</b>\n\n"
@@ -82,6 +85,9 @@ TEXTS = {
         "btn_settings": "⚙️ Настройки",
         "btn_help": "🆘 Помощь (/help)",
         "btn_close": "🔙 Закрыть",
+        "btn_back": "🔙 Назад",
+        "btn_all_planets": "🪐 Все планеты",
+        "back_to_main_msg": "🏠 <b>Вы в главном меню!</b> Задайте вопрос или выберите нужный раздел 😊",
         "input_placeholder": "Задайте вопрос или выберите раздел...",
         "lang_changed_msg": (
             "🇷🇺 <b>Русский язык успешно выбран!</b>\n\n"
@@ -124,6 +130,9 @@ TEXTS = {
         "btn_settings": "⚙️ Settings",
         "btn_help": "🆘 Help (/help)",
         "btn_close": "🔙 Close",
+        "btn_back": "🔙 Back",
+        "btn_all_planets": "🪐 All Planets",
+        "back_to_main_msg": "🏠 <b>You are in the main menu!</b> Ask a question or choose an activity 😊",
         "input_placeholder": "Ask a question or select a topic...",
         "lang_changed_msg": (
             "🇬🇧 <b>English language successfully selected!</b>\n\n"

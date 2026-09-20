@@ -4,7 +4,7 @@ import asyncio
 import logging
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.types import Message, CallbackQuery, FSInputFile, URLInputFile, InputMediaPhoto
 from aiogram.enums import ChatAction
 from aiogram.fsm.context import FSMContext
 
@@ -13,7 +13,15 @@ from locales import TEXTS, get_user_lang, set_user_setting
 from keyboards import (
     get_main_keyboard,
     get_settings_keyboard,
-    get_cancel_keyboard
+    get_cancel_keyboard,
+    get_planets_keyboard,
+    get_single_planet_keyboard
+)
+from planets_service import (
+    get_all_planets,
+    get_planet_by_id,
+    resolve_planet_image,
+    get_overview_image
 )
 
 logger = logging.getLogger(__name__)
@@ -355,66 +363,38 @@ async def english_menu_handler(message: Message) -> None:
     asyncio.create_task(_async_send_voice_note(message, voice_text, user_id, lang=lang))
 
 # 🪐 8 ta Sayyora tugmasi va buyruqlari
-from planets_service import get_all_planets, get_planet_by_id, resolve_planet_image
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, URLInputFile
-
 def get_planets_buttons() -> InlineKeyboardMarkup:
-    planets = get_all_planets()
-    emojis = {
-        "Yer": "🌍", "Mars": "🔴", "Uran": "🔵", "Venera": "🟡",
-        "Neptun": "🌊", "Saturn": "🪐", "Merkuriy": "🟣", "Yupiter": "🟠"
-    }
-    keyboard = []
-    row = []
-    for p in planets:
-        t = p.get("title", "Sayyora")
-        emo = emojis.get(t, "🪐")
-        p_id = p.get("id")
-        row.append(InlineKeyboardButton(text=f"{emo} {t}", callback_data=f"planet_view:{p_id}"))
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+    return get_planets_keyboard("uz")
 
-@router.message(Command("sayyoralar"))
-@router.message(F.text.in_([
-    "🪐 8 ta Sayyora", "🪐 8 Планет", "🪐 8 Planets",
-    "sayyoralar", "планеты", "planets"
-]))
-async def planets_menu_handler(message: Message) -> None:
-    user_id = message.from_user.id
-    lang = get_user_lang(user_id)
-    
+def _get_planets_overview_text(lang: str = "uz") -> tuple[str, str]:
     if lang == "ru":
         text = (
             "🪐 <b>Kichik Alloma — 8 Удивительных Планет!</b> 🚀✨\n\n"
             "В нашей экосистеме каждая планета — это отдельный мир знаний и развития:\n\n"
-            "• 🌍 <b>Земля</b> — Когнитивное обучение (AI Учитель)\n"
+            "• 🌍 <b>Земля</b> — Когнитивное развитие (AI Учитель)\n"
             "• 🔴 <b>Марс</b> — Физическая активность и упражнения\n"
-            "• 🔵 <b>Уран</b> — Английский язык и новые слова\n"
-            "• 🟡 <b>Венера</b> — Золотые монеты и виртуальный магазин\n"
-            "• 🌊 <b>Нептун</b> — Эмоциональная грамотность\n"
-            "• 🪐 <b>Сатурн</b> — Математика и логика\n"
+            "• 🔵 <b>Уран</b> — Английский язык и словарный запас\n"
+            "• 🟡 <b>Венера</b> — Золотые монеты и магазин наград\n"
+            "• 🌊 <b>Нептун</b> — Эмоциональный интеллект и доброта\n"
+            "• 🪐 <b>Сатурн</b> — Математика, логика и быстрый счет\n"
             "• 🟣 <b>Меркурий</b> — Профессии будущего и творчество\n"
-            "• 🟠 <b>Юпитер</b> — Тайм-менеджмент и дисциплина\n\n"
-            "📸 <b>Выберите планету ниже, чтобы увидеть её фото и подробности:</b> 👇"
+            "• 🟠 <b>Юпитер</b> — Распорядок дня и тайм-менеджмент\n\n"
+            "📸 <b>Выберите планету ниже, чтобы открыть её подробности:</b> 👇"
         )
-        voice_text = "Добро пожаловать в космическую систему Kichik Alloma! Выбери любую планету ниже, чтобы узнать её тайны!"
+        voice_text = "Добро пожаловать в космическую систему Kichik Alloma! Выбери любую планету ниже, чтобы открыть её тайны!"
     elif lang == "en":
         text = (
-            "🪐 <b>Kichik Alloma — 8 Incredible Planets!</b> 🚀✨\n\n"
-            "In our ecosystem, each planet represents a unique world of growth:\n\n"
-            "• 🌍 <b>Earth</b> — Cognitive Learning (AI Tutor)\n"
+            "🪐 <b>Kichik Alloma — 8 Wonderful Planets!</b> 🚀✨\n\n"
+            "In our ecosystem, each planet represents a unique world of knowledge:\n\n"
+            "• 🌍 <b>Earth</b> — Cognitive Learning (Socratic AI Tutor)\n"
             "• 🔴 <b>Mars</b> — Physical fitness and workouts\n"
-            "• 🔵 <b>Uranus</b> — English Language and Vocabulary\n"
+            "• 🔵 <b>Uranus</b> — English Vocabulary & Pronunciation\n"
             "• 🟡 <b>Venus</b> — Gold Coins & Virtual Store\n"
-            "• 🌊 <b>Neptune</b> — Emotional Intelligence\n"
-            "• 🪐 <b>Saturn</b> — Mathematics and Logic\n"
+            "• 🌊 <b>Neptune</b> — Emotional Intelligence & Mindfulness\n"
+            "• 🪐 <b>Saturn</b> — Mathematics and Logic puzzles\n"
             "• 🟣 <b>Mercury</b> — Future Careers and Arts\n"
             "• 🟠 <b>Jupiter</b> — Time management & routines\n\n"
-            "📸 <b>Select a planet below to see its picture and facts:</b> 👇"
+            "📸 <b>Select a planet below to view details and facts:</b> 👇"
         )
         voice_text = "Welcome to the Kichik Alloma universe! Pick any planet below to explore its mysteries and pictures!"
     else:
@@ -425,59 +405,162 @@ async def planets_menu_handler(message: Message) -> None:
             "• 🔴 <b>Mars</b> — Jismoniy faollik va mashqlar\n"
             "• 🔵 <b>Uran</b> — Ingliz tili va yangi so'zlar\n"
             "• 🟡 <b>Venera</b> — Oltin tangalar va virtual do'kon\n"
-            "• 🌊 <b>Neptun</b> — Emotsional savodxonlik\n"
-            "• 🪐 <b>Saturn</b> — Matematika va mantiq\n"
+            "• 🌊 <b>Neptun</b> — Emotsional savodxonlik va his-tuyg'ular\n"
+            "• 🪐 <b>Saturn</b> — Matematika va mantiqiy misollar\n"
             "• 🟣 <b>Merkuriy</b> — Kelajak kasblari va ijodiyot\n"
             "• 🟠 <b>Yupiter</b> — Taym-menejment va intizom\n\n"
-            "📸 <b>Sayyoraning rasmi va batafsil ma'lumotini ko'rish uchun pastdagi tugmalardan birini tanlang:</b> 👇"
+            "📸 <b>Sayyoraning rasmi va ma'lumotini ko'rish uchun quyidagi tugmalardan birini tanlang:</b> 👇"
         )
         voice_text = "Kichik Alloma koinotiga xush kelibsiz! Sayyoralardan birini tanlang, men uning rasmi va sirlarini ochib beraman!"
+    return text, voice_text
 
-    await message.answer(text, reply_markup=get_planets_buttons(), parse_mode="HTML")
+@router.message(Command("sayyoralar"))
+@router.message(F.text.in_([
+    "🪐 8 ta Sayyora", "🪐 8 Планет", "🪐 8 Planets",
+    "sayyoralar", "планеты", "planets"
+]))
+async def planets_menu_handler(message: Message) -> None:
+    user_id = message.from_user.id
+    lang = get_user_lang(user_id)
+    text, voice_text = _get_planets_overview_text(lang)
+    overview_img = get_overview_image(lang)
+    markup = get_planets_keyboard(lang)
+
+    sent = False
+    if overview_img:
+        try:
+            photo = FSInputFile(overview_img) if os.path.exists(overview_img) else URLInputFile(overview_img)
+            await message.answer_photo(
+                photo=photo,
+                caption=text,
+                reply_markup=markup,
+                parse_mode="HTML"
+            )
+            sent = True
+        except Exception as e:
+            logger.warning(f"Umumiy sayyoralar rasmini yuborishda xato: {e}")
+
+    if not sent:
+        await message.answer(text, reply_markup=markup, parse_mode="HTML")
+
     asyncio.create_task(_async_send_voice_note(message, voice_text, user_id, lang=lang))
+
+# 8 ta sayyora umumiy menyusiga qaytish callback ("🪐 Barcha sayyoralar")
+@router.callback_query(F.data == "planets_menu")
+async def planets_menu_callback(callback: CallbackQuery) -> None:
+    user_id = callback.from_user.id
+    lang = get_user_lang(user_id)
+    await callback.answer("🪐 8 ta Sayyora")
+
+    text, _ = _get_planets_overview_text(lang)
+    overview_img = get_overview_image(lang)
+    markup = get_planets_keyboard(lang)
+
+    done = False
+    if overview_img:
+        try:
+            photo = FSInputFile(overview_img) if os.path.exists(overview_img) else URLInputFile(overview_img)
+            if callback.message.photo:
+                await callback.message.edit_media(
+                    media=InputMediaPhoto(media=photo, caption=text, parse_mode="HTML"),
+                    reply_markup=markup
+                )
+                done = True
+            else:
+                await callback.message.answer_photo(
+                    photo=photo,
+                    caption=text,
+                    reply_markup=markup,
+                    parse_mode="HTML"
+                )
+                done = True
+        except Exception as e:
+            logger.warning(f"Sayyoralar menyusiga qaytishda xato: {e}")
+
+    if not done:
+        try:
+            await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        except Exception:
+            await callback.message.answer(text, reply_markup=markup, parse_mode="HTML")
+
+# Sayyoralar menyusini yopish va asosiy menyuga qaytish callback ("🔙 Orqaga")
+@router.callback_query(F.data == "close_planets")
+async def close_planets_callback(callback: CallbackQuery) -> None:
+    user_id = callback.from_user.id
+    lang = get_user_lang(user_id)
+    t = TEXTS.get(lang, TEXTS["uz"])
+    await callback.answer()
+
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+
+    await callback.message.answer(
+        t.get("back_to_main_msg", "🏠 <b>Asosiy menyudasiz!</b>"),
+        reply_markup=get_main_keyboard(lang),
+        parse_mode="HTML"
+    )
 
 # Bitta sayyoraning rasmi va ma'lumotini ko'rsatish callback
 @router.callback_query(F.data.startswith("planet_view:"))
 async def planet_view_callback(callback: CallbackQuery) -> None:
     planet_id = callback.data.split(":")[1]
-    p = get_planet_by_id(planet_id)
     user_id = callback.from_user.id
     lang = get_user_lang(user_id)
+    p = get_planet_by_id(planet_id, lang=lang)
     if not p:
         await callback.answer("Sayyora topilmadi!", show_alert=True)
         return
 
-    await callback.answer(f"🪐 {p.get('title')} sayyorasi tanlandi!")
-
     title = p.get("title", "")
+    await callback.answer(f"🪐 {title} sayyorasi!")
+
     desc = p.get("description", "")
-    caption = f"🪐 <b>{title} Sayyorasi</b>\n\n{desc}\n\n<i>Boshqa sayyorani ko'rish uchun quyidagi tugmalardan birini bosing:</i> 👇"
+    prompt_select = (
+        "👇 <i>Boshqa sayyorani tanlang yoki orqaga qayting:</i>" if lang == "uz"
+        else ("👇 <i>Выберите другую планету или вернитесь назад:</i>" if lang == "ru"
+        else "👇 <i>Select another planet or go back:</i>")
+    )
+    caption = f"🪐 <b>{title} Sayyorasi</b>\n\n{desc}\n\n{prompt_select}"
+    markup = get_single_planet_keyboard(planet_id, lang=lang)
 
     img_path_or_url = resolve_planet_image(p.get("image"))
-    sent = False
+    done = False
 
     if img_path_or_url:
         try:
-            if os.path.exists(img_path_or_url):
-                photo = FSInputFile(img_path_or_url)
+            photo = FSInputFile(img_path_or_url) if os.path.exists(img_path_or_url) else URLInputFile(img_path_or_url)
+            if callback.message.photo:
+                await callback.message.edit_media(
+                    media=InputMediaPhoto(media=photo, caption=caption, parse_mode="HTML"),
+                    reply_markup=markup
+                )
+                done = True
             else:
-                photo = URLInputFile(img_path_or_url)
-            await callback.message.answer_photo(
-                photo=photo,
-                caption=caption,
-                reply_markup=get_planets_buttons(),
+                await callback.message.answer_photo(
+                    photo=photo,
+                    caption=caption,
+                    reply_markup=markup,
+                    parse_mode="HTML"
+                )
+                done = True
+        except Exception as e:
+            logger.warning(f"Rasm ko'rsatishda xato: {e}")
+
+    if not done:
+        try:
+            await callback.message.edit_text(
+                caption,
+                reply_markup=markup,
                 parse_mode="HTML"
             )
-            sent = True
-        except Exception as e:
-            logger.warning(f"Rasm yuborishda xato: {e}")
-
-    if not sent:
-        await callback.message.answer(
-            caption,
-            reply_markup=get_planets_buttons(),
-            parse_mode="HTML"
-        )
+        except Exception:
+            await callback.message.answer(
+                caption,
+                reply_markup=markup,
+                parse_mode="HTML"
+            )
 
     asyncio.create_task(_async_send_voice_note(callback.message, f"{title} sayyorasiga xush kelibsiz! {desc}", user_id, lang=lang))
 
