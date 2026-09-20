@@ -1105,43 +1105,24 @@
       // 0. AGAR AVVAL SAVOL BERILGAN BO'LSA (Matematika yoki Tarbiya viktorinasi)
       // =========================================================================
       if (pendingQuiz) {
-        if (pendingQuiz.type === 'math_lesson_11') {
+        if (pendingQuiz.type === 'math') {
           const userNum = parseUzbekNumber(clean);
-          if (userNum === 374 || lower.includes("374")) {
-            reply = `Ofarin, ${nm}! 🌟 Judayam to'g'ri topdingiz — 374! Siz ajoyib va tez hisoblovchi kichik allomasiz! 👏\n\nQarang: 34 × 11 da 3 va 4 ning yig'indisi 7, o'rtaga qo'ysak 374 bo'ladi! Barakalla!\n\nKeling, endi xohlagan misolingizni ayting: katta sonlarni qo'shish, kvadrat, kub yoki ildizini topish — barchasini birga hisoblaymiz! 🚀`;
-            uzText = "To'g'ri javob: 34 × 11 = 374! Barakalla!";
+          const isTen = userNum === 10 || clean.includes("10") || lower.includes("o'n") || lower.includes("on");
+          if (isTen) {
+            reply = `Barakalla, ${nm}! Judayam to'g'ri topdingiz — javob 10! Siz juda aqlli va odobli bolajonsiz! 🌟 Keling, endi ingliz tili yoki tarbiyadan savol beraymi? 😊`;
+            uzText = "To'g'ri javob: 10! Barakalla!";
             audioKey = "math_correct";
             pendingQuiz = null;
             addAiMessage(reply, uzText, audioKey, true);
             playStudioAudio(audioKey);
             return;
-          } else {
-            reply = `Juda yaqin keldingiz, ${nm}! 😊 Keling, birga tekshiramiz: 34 sonining chetidagi raqamlari 3 va 4. Ularni qo'shamiz: 3 + 4 = 7. Endi 7 ni 3 va 4 ning o'rtasiga qo'ysak necha hosil bo'ladi? Qani, ayting-chi! 😉`;
-            uzText = "Qayta hisoblang: 3 va 4 o'rtasiga 7 ni qo'ying (3_4)";
+          } else if (userNum !== null || lower.includes("bilmayman") || lower.includes("necha")) {
+            reply = `Juda yaqin keldingiz, ${nm}! 😊 Keling, barmoqlarimizda birga sanaymiz: 5 ta olma bor edi. Yana 5 tasini sanaymiz: 6, 7, 8, 9, 10! 🖐️ Qani endi ayting-chi, nechta bo'ldi? 😉`;
+            uzText = "Qayta sanab ko'ring: 5 + 5 = ?";
             audioKey = "math_retry";
             addAiMessage(reply, uzText, audioKey, true);
             playStudioAudio(audioKey);
             return;
-          }
-        } else if (pendingQuiz.type === 'math') {
-          const userNum = parseUzbekNumber(clean);
-          if (userNum !== null) {
-            if (userNum === pendingQuiz.answer) {
-              reply = `Barakalla, ${nm}! Judayam to'g'ri topdingiz — javob 10! Siz juda aqlli va odobli bolajonsiz! 🌟 Keling, endi ingliz tili yoki tarbiyadan savol beraymi? 😊`;
-              uzText = "To'g'ri javob: 10! Barakalla!";
-              audioKey = "math_correct";
-              pendingQuiz = null;
-              addAiMessage(reply, uzText, audioKey, true);
-              playStudioAudio(audioKey);
-              return;
-            } else {
-              reply = `Juda yaqin keldingiz, ${nm}! 😊 Keling, barmoqlarimizda birga sanaymiz: 5 ta olma bor edi. Yana 5 tasini sanaymiz: 6, 7, 8, 9, 10! 🖐️ Qani endi ayting-chi, nechta bo'ldi? 😉`;
-              uzText = "Qayta sanab ko'ring: 5 + 5 = ?";
-              audioKey = "math_retry";
-              addAiMessage(reply, uzText, audioKey, true);
-              playStudioAudio(audioKey);
-              return;
-            }
           }
         } else if (pendingQuiz.type === 'tarbiya') {
           if (lower.includes("ha") || lower.includes("albatta") || lower.includes("yordam") || lower.includes("beraman") || lower.includes("xursand")) {
@@ -1177,9 +1158,9 @@
       if (isGeneralLessonReq && !lower.includes("matematik") && !lower.includes("ingli") && !lower.includes("english")) {
         reply = `Ajoyib g'oya, ${nm}! 🎓 Kichik Alloma Akademiyasida 0 dan 100% gacha darslarimizga xush kelibsiz! 🌟\n\nMen sizga barcha fanlar bo'yicha eng boshidan boshlab to'liq dars o'ta olaman:\n\n1. 🔢 Matematika — tez hisoblash sirlari, karra jadvali va jumboqlar\n2. 🇬🇧 Ingliz tili — Amerika talaffuzida yangi so'zlar va so'zlashuv\n3. 🪐 Koinot va 8 sayyora — yulduzlar va fazo sirlari\n4. 🌿 Tabiat va hayvonot — qiziqarli biologik faktlar\n\nQaysi fandan dars boshlaymiz? Shunchaki fan nomini ayting! 🚀`;
         uzText = "0 dan 100% gacha darslar akademiyasi";
-        audioKey = "knowledge";
+        audioKey = "custom";
         addAiMessage(reply, uzText, audioKey, true);
-        playStudioAudio(audioKey);
+        speakCustomText(reply);
         return;
       }
 
@@ -1188,9 +1169,9 @@
       const isMathLessonReq = (lower.includes("matematik") || lower.includes("hisob") || lower.includes("arifmetik") || lower.includes("karra")) &&
                               (lower.includes("dars") || lower.includes("o't") || lower.includes("ot") || lower.includes("ber") || lower.includes("o'rgat") || lower.includes("orgat") || lower.includes("boshla") || lower.includes("o'rgan"));
       if (isMathLessonReq) {
-        pendingQuiz = { type: 'math_lesson_11', answer: 374 };
-        reply = `Ajoyib! Matematika darsimizga xush kelibsiz, ${nm}! 🔢\n\nBugun biz siz bilan koinotdagi eng qiziqarli sir — '11 ga tez ko'paytirish mo'jizasi'ni o'rganamiz! 🚀\n\nQarang: ikki xonali sonni 11 ga ko'paytirish uchun, uning ikki chetidagi raqamlarni qo'shib, o'rtasiga yozasiz!\nMasalan: 25 × 11 da 2 va 5 ning o'rtasiga (2+5=7) yoziladi, natija: 275 bo'ladi! 👏\n\nQani, sinab ko'ramiz: 34 ni 11 ga ko'paytirsak necha bo'ladi? (3 va 4 ning o'rtasiga 3+4=7 ni qo'ying). Qani, javobingizni ayting-chi! 😊`;
-        uzText = "Matematika darsi: 11 ga tez ko'paytirish mo'jizasi (34 × 11 = ?)";
+        pendingQuiz = { type: 'math', answer: 10 };
+        reply = `Keling, birgalikda qiziqarli hisoblaymiz, ${nm}! 🍎\n\nTasavvur qiling, sizda 5 ta shirin olma bor edi, do'stingiz sizga yana 5 ta olma sovg'a qildi.\n\nQani, o'ylab ko'ring-chi, endi sizda jami nechta olma bo'ladi? Necha deb o'ylaysiz? 😊`;
+        uzText = "Keling, birgalikda hisoblaymiz: 5 + 5 = ?";
         audioKey = "math";
         addAiMessage(reply, uzText, audioKey, true);
         playStudioAudio(audioKey);
@@ -1219,9 +1200,9 @@
       if (lower.includes("ucha olsa") || lower.includes("uchsak") || lower.includes("uchish mumkinmi")) {
         reply = `Agar insonlar qushlardek ucha olganida, qanotlarimiz bo'lardi va biz bulutlar ustida sayr qilardik, ${nm}! 🦅 Ko'chalarda mashinalar tirbandligi bo'lmasdi, hamma osmonda parvoz qilardi! Qaniydi, biz ham samoda ucholsak, a? ☁️✨`;
         uzText = "Tasavvur va Parvoz";
-        audioKey = "knowledge";
+        audioKey = "custom";
         addAiMessage(reply, uzText, audioKey, true);
-        playStudioAudio(audioKey);
+        speakCustomText(reply);
         return;
       }
 
@@ -1918,15 +1899,32 @@
         stopAllSpeech();
         return;
       }
-      playStudioAudio(audioKey, btnId);
+
+      const directStudioAudios = [
+        'welcome', 'qalesan', 'mood_good', 'name_ask', 'grade_response', 'thanks', 'goodbye',
+        'math', 'math_correct', 'math_retry', 'tarbiya', 'tarbiya_correct', 'cartoons', 'riddle',
+        'english', 'english_correct', 'en_apple', 'en_cat', 'en_dog', 'en_book', 'en_house',
+        'en_sun', 'en_water', 'en_car', 'en_bird', 'en_star', 'en_moon',
+        'planets', 'merkuriy', 'venera', 'earth', 'mars', 'jupiter', 'saturn', 'uran', 'neptune'
+      ];
+
+      if (directStudioAudios.includes(audioKey) && studioAudios[audioKey]) {
+        playStudioAudio(audioKey, btnId);
+      } else if (audioKey && (audioKey.startsWith("http") || audioKey.startsWith("/audio_cache/"))) {
+        playStudioAudio(audioKey, btnId);
+      } else if (customText && customText.trim()) {
+        speakCustomText(customText, btnId);
+      } else {
+        playStudioAudio(audioKey, btnId);
+      }
     }
 
     function speakCustomText(text, btnId = null) {
       getSpeechAudioUrl(text).then(url => {
         if (url) playStudioAudio(url, btnId);
-        else playStudioAudio('general', btnId);
+        else speakWithWebSpeech(text, btnId);
       }).catch(() => {
-        playStudioAudio('general', btnId);
+        speakWithWebSpeech(text, btnId);
       });
     }
 
