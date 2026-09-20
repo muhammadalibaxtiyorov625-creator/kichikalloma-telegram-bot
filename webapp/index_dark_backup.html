@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kichikalloma Ai</title>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      /* Oq va iliq sariq bolalar mavzusi */
+      --bg-light: #fffdf5;
+      --bg-gradient: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+      --card-ai-bg: #fefce8;
+      --card-ai-border: #fef08a;
+      --user-bubble-bg: #f59e0b;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --mic-glow: rgba(245, 158, 11, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      background-color: var(--bg-light);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Navigation (Oq va sariq dizayn) */
+    .top-nav {
+      position: relative;
+      background: #ffffff;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #fef08a;
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.08);
+      z-index: 10;
+      min-height: 60px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: #1e293b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      z-index: 2;
+    }
+
+    .nav-title {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .nav-logo {
+      height: 44px;
+      object-fit: contain;
+      display: block;
+      /* Mutlaqo qimirlamasdan joyida qotib turadi! */
+      animation: none !important;
+      transform: none !important;
+      filter: none !important;
+    }
+
+    /* Ovoz to'xtatish tugmasi */
+    .speaking-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #b91c1c;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      z-index: 3;
+      margin-left: auto;
+      margin-right: 6px;
+    }
+
+    .speaking-indicator.active {
+      display: flex;
+    }
+
+    /* Chat Messages Container */
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    /* Message Row */
+    .msg-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .msg-row.user {
+      justify-content: flex-end;
+    }
+
+    .ai-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fde047, #f59e0b, #b45309);
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .ai-avatar::after {
+      content: '';
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      background: #22c55e;
+      border-radius: 50%;
+      bottom: 0;
+      right: 0;
+      border: 2px solid #ffffff;
+    }
+
+    /* Message Bubbles */
+    .bubble {
+      max-width: 85%;
+      padding: 12px 15px;
+      border-radius: 18px;
+      font-size: 15px;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .ai-bubble {
+      background: var(--card-ai-bg);
+      color: #1e293b;
+      border: 1.5px solid var(--card-ai-border);
+      border-top-left-radius: 6px;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.06);
+    }
+
+    .user-bubble {
+      background: var(--user-bubble-bg);
+      color: #ffffff;
+      border-top-right-radius: 6px;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+      font-weight: 500;
+    }
+
+    .bubble-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .action-icon-btn {
+      background: #fef08a;
+      border: 1px solid #fde047;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #b45309;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .action-icon-btn:active {
+      transform: scale(0.9);
+      background: #fde047;
+    }
+
+    .action-icon-btn.playing {
+      background: #fee2e2;
+      border-color: #ef4444;
+      color: #b91c1c;
+    }
+
+    .translation-box {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #ffffff;
+      border-left: 3px solid #f59e0b;
+      border-radius: 6px;
+      font-size: 13.5px;
+      color: #78350f;
+      display: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .translation-box.show {
+      display: block;
+    }
+
+    /* Sound Waves animation */
+    .wave-bars {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 20px;
+    }
+
+    .wave-bars.active {
+      display: flex;
+    }
+
+    .bar {
+      width: 4px;
+      height: 8px;
+      background: #f59e0b;
+      border-radius: 2px;
+      animation: soundWave 0.8s infinite ease-in-out alternate;
+    }
+
+    .bar:nth-child(2) { animation-delay: 0.15s; height: 16px; }
+    .bar:nth-child(3) { animation-delay: 0.3s; height: 22px; }
+    .bar:nth-child(4) { animation-delay: 0.45s; height: 14px; }
+    .bar:nth-child(5) { animation-delay: 0.6s; height: 8px; }
+
+    @keyframes soundWave {
+      0% { height: 6px; }
+      100% { height: 22px; background: #fbbf24; }
+    }
+
+    /* Bottom Control Bar */
+    .bottom-bar {
+      background: #ffffff;
+      border-top: 2px solid #fef08a;
+      padding: 8px 12px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 -4px 14px rgba(245, 158, 11, 0.05);
+      z-index: 10;
+    }
+
+    /* Quick Chips (Tezkor tanlov tugmachalari) */
+    .chips-container {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      width: 100%;
+      padding: 4px 2px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .chips-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      background: #fef9c3;
+      border: 1.5px solid #fde047;
+      color: #92400e;
+      padding: 6px 13px;
+      border-radius: 18px;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .chip:active {
+      transform: scale(0.94);
+      background: #fef08a;
+    }
+
+    /* Mikrofon bo'limi */
+    .mic-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mic-button-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 84px;
+      height: 84px;
+    }
+
+    .mic-pulse-ring {
+      position: absolute;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: var(--mic-glow);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mic-pulse-ring.active {
+      animation: pulseAnim 1.4s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .mic-btn {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      transition: transform 0.15s;
+    }
+
+    .mic-btn.recording {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+      animation: pulseRecord 1.2s infinite;
+    }
+
+    @keyframes pulseRecord {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+
+    .mic-btn svg {
+      width: 38px;
+      height: 38px;
+      fill: currentColor;
+    }
+
+    .mic-status-label {
+      font-size: 14px;
+      color: #78350f;
+      font-weight: 700;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    /* Matn kiritish qatori */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      align-items: center;
+      padding-top: 2px;
+    }
+
+    .input-row input {
+      flex: 1;
+      border: 1.5px solid #fef08a;
+      background: #fffdf5;
+      border-radius: 22px;
+      padding: 9px 15px;
+      font-size: 14.5px;
+      color: #1e293b;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-row input:focus {
+      border-color: #f59e0b;
+      background: #ffffff;
+    }
+
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      border: none;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3);
+      transition: transform 0.1s;
+    }
+
+    .send-btn:active {
+      transform: scale(0.92);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation (Oq va sariq dizayn) -->
+  <div class="top-nav">
+    <button class="nav-btn" onclick="handleBack()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+    <div class="nav-title">
+      <img src="kichikalloma-logo.png" alt="Kichik Alloma" class="nav-logo">
+    </div>
+
+    <!-- Ovoz to'xtatish tugmasi -->
+    <div class="speaking-indicator" id="stopVoiceBtn" onclick="stopAllSpeech()">
+      <span>⏹</span> Ovozni to'xtatish
+    </div>
+
+    <button class="nav-btn" onclick="clearHistoryConfirm()" title="Chatni tozalash">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Chat Content (Matnlar saqlanib turadi) -->
+  <div class="chat-container" id="chatContainer">
+    <!-- Xabarlar dinamik chiqariladi va saqlanadi -->
+  </div>
+
+  <!-- Bottom Control Bar -->
+  <div class="bottom-bar">
+
+    <!-- Ovoz to'lqinlari -->
+    <div class="wave-bars" id="waveBars">
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+
+    <!-- Markaziy Mikrofon Bo'limi -->
+    <div class="mic-section">
+      <div class="mic-button-wrapper">
+        <div class="mic-pulse-ring" id="pulseRing"></div>
+        <button class="mic-btn" id="micBtn" onclick="toggleVoiceInput()">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Status -->
+      <div class="mic-status-label" id="micStatus">Gapirish uchun bosing 🎙️</div>
+    </div>
+
+    <!-- Matn kiritish qatori -->
+    <div class="input-row">
+      <input type="text" id="textInput" placeholder="Yoki bu yerga yozing..." autocomplete="off" onkeypress="handleKeyPress(event)">
+      <button class="send-btn" onclick="sendTextMessage()" title="Yuborish">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#ffffff');
+      tg.setBackgroundColor('#fffdf5');
+    }
+
+    function handleBack() {
+      stopAllSpeech();
+      if (tg?.close) tg.close();
+      else window.history.back();
+    }
+
+    // Studiya sifatidagi o'g'il bola audio fayllari (Matn bilan 100% bir xil)
+    const studioAudios = {
+      welcome: "audio/welcome.mp3",
+      qalesan: "audio/qalesan.mp3",
+      mood_good: "audio/mood_good.mp3",
+      name_ask: "audio/name_ask.mp3",
+      grade_response: "audio/grade_response.mp3",
+      thanks: "audio/thanks.mp3",
+      goodbye: "audio/goodbye.mp3",
+      startup: "audio/startup.mp3",
+      founder: "audio/founder.mp3",
+      english: "audio/english.mp3",
+      english_correct: "audio/english_correct.mp3",
+      en_apple: "audio/en_apple.mp3",
+      en_cat: "audio/en_cat.mp3",
+      en_dog: "audio/en_dog.mp3",
+      en_book: "audio/en_book.mp3",
+      en_house: "audio/en_house.mp3",
+      en_sun: "audio/en_sun.mp3",
+      en_water: "audio/en_water.mp3",
+      en_car: "audio/en_car.mp3",
+      en_bird: "audio/en_bird.mp3",
+      en_star: "audio/en_star.mp3",
+      en_moon: "audio/en_moon.mp3",
+      animals: "audio/animals.mp3",
+      math: "audio/math.mp3",
+      math_correct: "audio/math_correct.mp3",
+      math_retry: "audio/math_retry.mp3",
+      space: "audio/space.mp3",
+      planets: "audio/planets.mp3",
+      merkuriy: "audio/merkuriy.mp3",
+      venera: "audio/venera.mp3",
+      earth: "audio/earth.mp3",
+      mars: "audio/mars.mp3",
+      jupiter: "audio/jupiter.mp3",
+      saturn: "audio/saturn.mp3",
+      uran: "audio/uran.mp3",
+      neptune: "audio/neptune.mp3",
+      tarbiya: "audio/tarbiya.mp3",
+      tarbiya_correct: "audio/tarbiya_correct.mp3",
+      cartoons: "audio/cartoons.mp3",
+      riddle: "audio/riddle.mp3",
+      general: "audio/general.mp3"
+    };
+
+    let activeAudioElement = null;
+    let isCurrentlySpeaking = false;
+    let currentPlayingBtn = null;
+
+    // Suhbat tarixini saqlash tizimi (LocalStorage)
+    const STORAGE_KEY = "kichikalloma_saved_chat_history";
+
+    // Bola profilini eslab qolish
+    let childProfile = {
+      name: localStorage.getItem("child_name") || "",
+      grade: localStorage.getItem("child_grade") || "",
+      state: localStorage.getItem("chat_state") || "start"
+    };
+
+    function getSavedMessages() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function saveMessageToStorage(msgObj) {
+      const list = getSavedMessages() || [];
+      list.push(msgObj);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+
+    function clearHistoryConfirm() {
+      if (confirm("Hamma suhbat yozuvlarini tozalab yangidan boshlaymizmi?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem("child_name");
+        localStorage.removeItem("child_grade");
+        localStorage.removeItem("chat_state");
+        childProfile = { name: "", grade: "", state: "start" };
+        document.getElementById('chatContainer').innerHTML = '';
+        renderWelcomeMessage(true);
+      }
+    }
+
+    // Boshlang'ich salomlashuv
+    function renderWelcomeMessage(playSound = false) {
+      const welcomeText = "Assalomu alaykum, aziz do'stim! 🌟 Men Kichikalloma Aiman. Men sizga 8 ta sayyora, ingliz tili, matematika va odob-axloqni o'rgataman! Keling, avval tanishib olamiz — ismingiz nima?";
+      addAiMessage(welcomeText, null, 'welcome', false);
+      if (playSound) {
+        setTimeout(() => {
+          playStudioAudio('welcome');
+        }, 500);
+      }
+    }
+
+    // Sahifa har safar yuklanganda mini ilova 0 dan yangi boshlanadi
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem("child_name");
+        localStorage.removeItem("child_grade");
+        localStorage.removeItem("chat_state");
+      } catch (e) {}
+      childProfile = { name: "", grade: "", state: "start" };
+      document.getElementById('chatContainer').innerHTML = '';
+      renderWelcomeMessage(true);
+    });
+
+    // AI xabari yaratish va saqlash
+    function addAiMessage(text, uzbekText, audioKey = 'general', shouldSave = true) {
+      renderAiBubble(text, uzbekText, audioKey);
+
+      if (shouldSave) {
+        saveMessageToStorage({
+          sender: 'ai',
+          text: text,
+          uzbekText: uzbekText,
+          audioKey: audioKey,
+          time: new Date().toLocaleTimeString()
+        });
+      }
+    }
+
+    function renderAiBubble(text, uzbekText, audioKey) {
+      const container = document.getElementById('chatContainer');
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      const id = 'trans_' + Math.random().toString(36).substr(2, 9);
+      const audioBtnId = 'audio_' + Math.random().toString(36).substr(2, 9);
+
+      row.innerHTML = `
+        <div class="ai-avatar"></div>
+        <div class="bubble ai-bubble">
+          <div>${text.replace(/\n/g, '<br>')}</div>
+          ${uzbekText ? `<div class="translation-box" id="${id}"><b>Tarjima / Izoh:</b><br>${uzbekText}</div>` : ''}
+          <div class="bubble-actions">
+            ${uzbekText ? `
+              <button class="action-icon-btn" onclick="toggleTranslation('${id}')" title="Tarjima">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
+                </svg>
+              </button>
+            ` : ''}
+            <button class="action-icon-btn" id="${audioBtnId}" onclick="togglePlayAudio('${audioKey}', '${audioBtnId}', this.closest('.ai-bubble').querySelector('div').innerText)" title="Ovoz chiqarish yoki to'xtatish">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Foydalanuvchi xabari qo'shish va saqlash
+    function addUserMessage(text) {
+      stopAllSpeech();
+
+      renderUserBubble(text);
+      saveMessageToStorage({
+        sender: 'user',
+        text: text,
+        time: new Date().toLocaleTimeString()
+      });
+
+      // Moslashuvchan aqlli AI javobi
+      setTimeout(() => {
+        generateSmartAdaptiveReply(text);
+      }, 500);
+    }
+
+    function renderUserBubble(text) {
+      const container = document.getElementById('chatContainer');
+      const row = document.createElement('div');
+      row.className = 'msg-row user';
+      row.innerHTML = `<div class="bubble user-bubble">${text}</div>`;
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Tezkor savol yoki matn jo'natish
+    function sendQuickMessage(text) {
+      stopAllSpeech();
+      addUserMessage(text);
+    }
+
+    function sendTextMessage() {
+      const input = document.getElementById('textInput');
+      const val = input.value.trim();
+      if (!val) return;
+      input.value = '';
+      addUserMessage(val);
+    }
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') {
+        sendTextMessage();
+      }
+    }
+
+    // 0 dan 100 gacha va undan katta sonlarni inglizcha so'zga aylantirish
+    function numberToEnglish(num) {
+      const ones = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+                    "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+      const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+      if (num >= 0 && num < 20) return ones[num];
+      if (num < 100) {
+        const rem = num % 10;
+        return tens[Math.floor(num / 10)] + (rem > 0 ? "-" + ones[rem] : "");
+      }
+      if (num === 100) return "one hundred";
+      if (num < 1000) {
+        const h = Math.floor(num / 100);
+        const rem = num % 100;
+        return ones[h] + " hundred" + (rem > 0 ? " " + numberToEnglish(rem) : "");
+      }
+      return num.toString();
+    }
+
+    // O'zbekcha so'zlarni raqamga aylantirish (0 dan 100 gacha)
+    function parseUzbekNumber(str) {
+      if (!str) return null;
+      const lower = str.toLowerCase().trim();
+      const numDirect = lower.match(/\b\d+\b/);
+      if (numDirect) return parseInt(numDirect[0]);
+      
+      const words = {
+        "nol": 0, "bir": 1, "bitta": 1, "ikki": 2, "ikkita": 2, "uch": 3, "uchta": 3,
+        "to'rt": 4, "tort": 4, "to'rtta": 4, "besh": 5, "beshta": 5,
+        "olti": 6, "oltita": 6, "yetti": 7, "yettita": 7, "sakkiz": 8, "sakkizta": 8,
+        "to'qqiz": 9, "toqqiz": 9, "to'qqizta": 9, "o'n": 10, "on": 10, "o'nta": 10, "onta": 10,
+        "o'n bir": 11, "o'n ikki": 12, "o'n uch": 13, "o'n to'rt": 14, "o'n besh": 15,
+        "o'n olti": 16, "o'n yetti": 17, "o'n sakkiz": 18, "o'n to'qqiz": 19,
+        "yigirma": 20, "o'ttiz": 30, "ottiz": 30, "qirq": 40, "ellik": 50,
+        "oltmish": 60, "yetmish": 70, "sakson": 80, "to'qson": 90, "toqson": 90, "yuz": 100
+      };
+      
+      for (const [k, v] of Object.entries(words)) {
+        if (lower === k || lower.includes(k)) return v;
+      }
+      return null;
+    }
+
+    // Katta Ingliz tili lug'ati (150+ so'zlar barcha mavzularda)
+    const extendedVocab = [
+      // Mevalar & Sabzavotlar
+      { uz: "olma", en: "Apple", tr: "ˈæp.əl", icon: "🍎", audio: "en_apple" },
+      { uz: "banan", en: "Banana", tr: "bəˈnæn.ə", icon: "🍌" },
+      { uz: "uzum", en: "Grape", tr: "ɡreɪp", icon: "🍇" },
+      { uz: "anor", en: "Pomegranate", tr: "ˈpɒm.ɪˌɡræn.ɪt", icon: "🍓" },
+      { uz: "tarvuz", en: "Watermelon", tr: "ˈwɔː.təˌmel.ən", icon: "🍉" },
+      { uz: "qovun", en: "Melon", tr: "ˈmel.ən", icon: "🍈" },
+      { uz: "shaftoli", en: "Peach", tr: "piːtʃ", icon: "🍑" },
+      { uz: "apelsin", en: "Orange", tr: "ˈɒr.ɪndʒ", icon: "🍊" },
+      { uz: "limon", en: "Lemon", tr: "ˈlem.ən", icon: "🍋" },
+      { uz: "qulupnay", en: "Strawberry", tr: "ˈstrɔː.bər.i", icon: "🍓" },
+      { uz: "sabzi", en: "Carrot", tr: "ˈkær.ət", icon: "🥕" },
+      { uz: "pomidor", en: "Tomato", tr: "təˈmɑː.təʊ", icon: "🍅" },
+      { uz: "bodring", en: "Cucumber", tr: "ˈkjuː.kʌm.bər", icon: "🥒" },
+      { uz: "kartoshka", en: "Potato", tr: "pəˈteɪ.təʊ", icon: "🥔" },
+      { uz: "piyoz", en: "Onion", tr: "ˈʌn.jən", icon: "🧅" },
+
+      // Hayvonlar
+      { uz: "mushuk", en: "Cat", tr: "kæt", icon: "🐱", audio: "en_cat" },
+      { uz: "kuchuk", en: "Dog", tr: "dɒɡ", icon: "🐕", audio: "en_dog" },
+      { uz: "it", en: "Dog", tr: "dɒɡ", icon: "🐕", audio: "en_dog" },
+      { uz: "sher", en: "Lion", tr: "ˈlaɪ.ən", icon: "🦁" },
+      { uz: "ayiq", en: "Bear", tr: "beər", icon: "🐻" },
+      { uz: "fil", en: "Elephant", tr: "ˈel.ɪ.fənt", icon: "🐘" },
+      { uz: "ot", en: "Horse", tr: "hɔːs", icon: "🐎" },
+      { uz: "sigir", en: "Cow", tr: "kaʊ", icon: "🐄" },
+      { uz: "quyon", en: "Rabbit", tr: "ˈræb.ɪt", icon: "🐇" },
+      { uz: "bo'ri", en: "Wolf", tr: "wʊlf", icon: "🐺" },
+      { uz: "tulki", en: "Fox", tr: "fɒks", icon: "🦊" },
+      { uz: "qush", en: "Bird", tr: "bɜːd", icon: "🐦", audio: "en_bird" },
+      { uz: "baliq", en: "Fish", tr: "fɪʃ", icon: "🐟" },
+      { uz: "kapalak", en: "Butterfly", tr: "ˈbʌt.ə.flaɪ", icon: "🦋" },
+      { uz: "ari", en: "Bee", tr: "biː", icon: "🐝" },
+
+      // Ranglar
+      { uz: "qizil", en: "Red", tr: "red", icon: "🔴" },
+      { uz: "ko'k", en: "Blue", tr: "bluː", icon: "🔵" },
+      { uz: "sariq", en: "Yellow", tr: "ˈjel.əʊ", icon: "🟡" },
+      { uz: "yashil", en: "Green", tr: "ɡriːn", icon: "🟢" },
+      { uz: "oq", en: "White", tr: "waɪt", icon: "⚪" },
+      { uz: "qora", en: "Black", tr: "blæk", icon: "⚫" },
+      { uz: "pushti", en: "Pink", tr: "pɪŋk", icon: "🌸" },
+      { uz: "binafsha", en: "Purple", tr: "ˈpɜː.pəl", icon: "🟣" },
+      { uz: "jigarrang", en: "Brown", tr: "braʊn", icon: "🟤" },
+
+      // Maktab & O'qish
+      { uz: "kitob", en: "Book", tr: "bʊk", icon: "📖", audio: "en_book" },
+      { uz: "daftar", en: "Notebook", tr: "ˈnəʊt.bʊk", icon: "📓" },
+      { uz: "qalam", en: "Pencil", tr: "ˈpen.səl", icon: "✏️" },
+      { uz: "ruchka", en: "Pen", tr: "pen", icon: "🖊️" },
+      { uz: "maktab", en: "School", tr: "skuːl", icon: "🏫" },
+      { uz: "o'qituvchi", en: "Teacher", tr: "ˈtiː.tʃər", icon: "👩‍🏫" },
+      { uz: "o'quvchi", en: "Student", tr: "ˈstjuː.dənt", icon: "🎒" },
+      { uz: "parta", en: "Desk", tr: "desk", icon: "🪑" },
+
+      // Oila
+      { uz: "ota", en: "Father", tr: "ˈfɑː.ðər", icon: "👨" },
+      { uz: "dada", en: "Dad", tr: "dæd", icon: "👨" },
+      { uz: "ona", en: "Mother", tr: "ˈmʌð.ər", icon: "👩" },
+      { uz: "oyi", en: "Mom", tr: "mɒm", icon: "👩" },
+      { uz: "aka", en: "Brother", tr: "ˈbrʌð.ər", icon: "👦" },
+      { uz: "uka", en: "Brother", tr: "ˈbrʌð.ər", icon: "👦" },
+      { uz: "opa", en: "Sister", tr: "ˈsɪs.tər", icon: "👧" },
+      { uz: "singil", en: "Sister", tr: "ˈsɪs.tər", icon: "👧" },
+      { uz: "bobo", en: "Grandfather", tr: "ˈɡræn.fɑː.ðər", icon: "👴" },
+      { uz: "buvi", en: "Grandmother", tr: "ˈɡræn.mʌð.ər", icon: "👵" },
+      { uz: "oila", en: "Family", tr: "ˈfæm.əl.i", icon: "👨‍👩‍👧‍👦" },
+      { uz: "do'st", en: "Friend", tr: "frend", icon: "🤝" },
+
+      // Tabiat & Koinot
+      { uz: "quyosh", en: "Sun", tr: "sʌn", icon: "☀️", audio: "en_sun" },
+      { uz: "oy", en: "Moon", tr: "muːn", icon: "🌙", audio: "en_moon" },
+      { uz: "yulduz", en: "Star", tr: "stɑːr", icon: "⭐", audio: "en_star" },
+      { uz: "suv", en: "Water", tr: "ˈwɔː.tər", icon: "💧", audio: "en_water" },
+      { uz: "uy", en: "House", tr: "haʊs", icon: "🏠", audio: "en_house" },
+      { uz: "mashina", en: "Car", tr: "kɑːr", icon: "🚗", audio: "en_car" },
+      { uz: "daraxt", en: "Tree", tr: "triː", icon: "🌳" },
+      { uz: "gul", en: "Flower", tr: "ˈflaʊ.ər", icon: "🌸" },
+      { uz: "daryo", en: "River", tr: "ˈrɪv.ər", icon: "🌊" },
+      { uz: "tog'", en: "Mountain", tr: "ˈmaʊn.tɪn", icon: "🏔️" },
+      { uz: "yomg'ir", en: "Rain", tr: "reɪn", icon: "🌧️" },
+      { uz: "qor", en: "Snow", tr: "snəʊ", icon: "❄️" },
+      { uz: "shamol", en: "Wind", tr: "wɪnd", icon: "💨" },
+      { uz: "osmon", en: "Sky", tr: "skaɪ", icon: "🌌" },
+
+      // Tana a'zolari
+      { uz: "bosh", en: "Head", tr: "hed", icon: "🗣️" },
+      { uz: "ko'z", en: "Eye", tr: "aɪ", icon: "👁️" },
+      { uz: "quloq", en: "Ear", tr: "ɪər", icon: "👂" },
+      { uz: "burun", en: "Nose", tr: "nəʊz", icon: "👃" },
+      { uz: "og'iz", en: "Mouth", tr: "maʊθ", icon: "👄" },
+      { uz: "qo'l", en: "Hand", tr: "hænd", icon: "🖐️" },
+      { uz: "oyoq", en: "Leg", tr: "leɡ", icon: "🦵" },
+      { uz: "yurak", en: "Heart", tr: "hɑːt", icon: "❤️" }
+    ];
+
+    // Faol kutilayotgan Sokratik savol
+    let pendingQuiz = null;
+
+    // Sokratik O'qituvchi AI mantiqi — barcha fanlarni mukammal biladi
+    function generateSmartAdaptiveReply(userText) {
+      const clean = userText.trim();
+      const lower = clean.toLowerCase();
+      let reply = "";
+      let uzText = null;
+      let audioKey = "general";
+      const nm = childProfile.name || "do'stim";
+
+      // =========================================================================
+      // 1. INGLIZ TILI: 0 DAN 100 GACHA SONLAR
+      // =========================================================================
+      const numMatch = clean.match(/\b\d+\b/);
+      if (numMatch && (lower.includes("ingliz") || lower.includes("english") || lower.includes("nimadir") || lower.includes("necha"))) {
+        const numVal = parseInt(numMatch[0]);
+        const engNum = numberToEnglish(numVal);
+        reply = `${numVal} soni ingliz tilida — ${engNum.toUpperCase()} deyiladi, ${nm}! 🔢 Qani birga qaytaramiz: ${engNum}! 😊`;
+        uzText = `${numVal} = ${engNum}`;
+        audioKey = "custom";
+        addAiMessage(reply, uzText, audioKey, true);
+        speakCustomText(reply);
+        return;
+      }
+
+      // =========================================================================
+      // 2. KATTA LUG'ATDAN ANIQ SO'ZNI TOPISH (150+ so'z)
+      // =========================================================================
+      for (const item of extendedVocab) {
+        if (lower.includes(item.uz) || lower.includes(item.en.toLowerCase())) {
+          pendingQuiz = null;
+          reply = `${item.icon} ${item.uz.charAt(0).toUpperCase() + item.uz.slice(1)} ingliz tilida — ${item.en} [${item.tr}] deyiladi, ${nm}! Qani birga qaytaramiz: ${item.en}! 😊`;
+          uzText = `${item.uz} = ${item.en} ${item.icon}`;
+          audioKey = item.audio || "custom";
+          addAiMessage(reply, uzText, audioKey, true);
+          if (item.audio) playStudioAudio(item.audio);
+          else speakCustomText(reply);
+          return;
+        }
+      }
+
+      // =========================================================================
+      // 2. AGAR AVVAL SAVOL BERILGAN BO'LSA VA BOLA JAVOB QAYTARAYOTGAN BO'LSA:
+      // =========================================================================
+      if (pendingQuiz) {
+        if (pendingQuiz.type === 'math') {
+          const userNum = parseUzbekNumber(clean);
+          if (userNum !== null) {
+            if (userNum === pendingQuiz.answer) {
+              // BOLA TO'G'RI TOPDI! 🎉
+              reply = `Barakalla, ${nm}! Judayam to'g'ri topdingiz — javob 10! Siz juda aqlli va odobli bolajonsiz! 🌟 Keling, endi ingliz tili yoki tarbiyadan savol beraymi? 😊`;
+              uzText = `To'g'ri javob: ${pendingQuiz.answer}! Barakalla!`;
+              audioKey = "math_correct";
+              pendingQuiz = { type: 'category_choice' };
+              addAiMessage(reply, uzText, audioKey, true);
+              playStudioAudio(audioKey);
+              return;
+            } else {
+              // BOLA NOTO'G'RI AYTDI — YORDAM BERAMIZ:
+              reply = `Juda yaqin keldingiz, ${nm}! 😊 Keling, barmoqlarimizda birga sanaymiz: 5 ta olma bor edi. Yana 5 tasini sanaymiz: 6, 7, 8, 9, 10! 🖐️ Qani endi ayting-chi, nechta bo'ldi? 😉`;
+              uzText = `Qayta sanab ko'ring: 5 + 5 = ?`;
+              audioKey = "math_retry";
+              addAiMessage(reply, uzText, audioKey, true);
+              playStudioAudio(audioKey);
+              return;
+            }
+          }
+        } else if (pendingQuiz.type === 'tarbiya') {
+          if (lower.includes("ha") || lower.includes("albatta") || lower.includes("yordam") || lower.includes("beraman") || lower.includes("xursand")) {
+            reply = `Barakalla, ${nm}! 🌟 Siz judayam tarbiyali va aqlli bolajonsiz! Ota-onangiz siz bilan faxrlanadi! 👏`;
+            uzText = `Ofarin! Siz juda tarbiyali bolajonsiz!`;
+            audioKey = "tarbiya_correct";
+            pendingQuiz = null;
+            addAiMessage(reply, uzText, audioKey, true);
+            playStudioAudio(audioKey);
+            return;
+          }
+        } else if (pendingQuiz.type === 'category_choice') {
+          if (lower.includes("tarbiya") || lower.includes("odob") || lower.includes("axloq")) {
+            reply = `Odobli bo'lish — eng buyuk fazilat, ${nm}! 🌟 Masalan, kattalarga har doim salom berish va ota-onaga yordam berish kerak! Siz ham ota-onangizga yordam berasizmi? 😊`;
+            uzText = `Odob-axloq va tarbiya`;
+            audioKey = "tarbiya";
+            pendingQuiz = { type: 'tarbiya' };
+            addAiMessage(reply, uzText, audioKey, true);
+            playStudioAudio(audioKey);
+            return;
+          } else if (lower.includes("ingliz") || lower.includes("english")) {
+            reply = `Hello, ${nm}! 👋 Welcome to English! 🌟 Ingliz tilida qaysi so'zni o'rganmoqchisiz? Masalan: Olma, Kitob yoki Mushuk? Ayting! 😊`;
+            uzText = `Ingliz tili sabog'i`;
+            audioKey = "english";
+            pendingQuiz = null;
+            addAiMessage(reply, uzText, audioKey, true);
+            playStudioAudio(audioKey);
+            return;
+          }
+        }
+      }
+
+      // =========================================================================
+      // 3. ANIQ MATEMATIK HISOB-KITOB: "17 - 5", "17 dan 5 ni ayir", "17 ariz 5", "5+5", "hisobla"
+      // =========================================================================
+      const allNums = clean.match(/\d+/g);
+      const hasSub = lower.includes("-") || lower.includes("ayir") || lower.includes("ariz") || lower.includes("minus") || lower.includes("kamayt") || lower.includes("ayirsak") || lower.includes("ayirsa");
+      const hasAdd = lower.includes("+") || lower.includes("qo'sh") || lower.includes("qosh") || lower.includes("plus") || lower.includes("jamla") || lower.includes("qo'shsak");
+      const hasMul = lower.includes("*") || lower.includes("x") || lower.includes("×") || lower.includes("ko'pay") || lower.includes("kopay") || lower.includes("karra") || lower.includes("zarb");
+      const hasDiv = lower.includes("/") || lower.includes("÷") || lower.includes("bo'l") || lower.includes("bol") || lower.includes("taqsim");
+
+      if (allNums && allNums.length >= 2 && (hasSub || hasAdd || hasMul || hasDiv)) {
+        const n1 = parseFloat(allNums[0]);
+        const n2 = parseFloat(allNums[1]);
+        if (hasSub) {
+          const res = n1 - n2;
+          reply = `${n1} dan ${n2} ni ayirsak — javob ${res} bo'ladi, ${nm}! 🍎 ${n1} - ${n2} = ${res}. Barakalla! Judayam to'g'ri hisob-kitob qildingiz! 🌟`;
+          uzText = `${n1} - ${n2} = ${res}`;
+        } else if (hasAdd) {
+          const res = n1 + n2;
+          reply = `${n1} ga ${n2} ni qo'shsak — javob ${res} bo'ladi, ${nm}! 🍎 ${n1} + ${n2} = ${res}. Barakalla! Ajoyib hisob-kitob! 🌟`;
+          uzText = `${n1} + ${n2} = ${res}`;
+        } else if (hasMul) {
+          const res = n1 * n2;
+          reply = `${n1} ni ${n2} ga ko'paytirsak — javob ${res} bo'ladi, ${nm}! 🌟 ${n1} × ${n2} = ${res}. Barakalla! Juda aqllisiz! 👏`;
+          uzText = `${n1} × ${n2} = ${res}`;
+        } else if (hasDiv) {
+          const res = n2 !== 0 ? (n1 / n2) : 0;
+          reply = `${n1} ni ${n2} ga bo'lsak — javob ${res} bo'ladi, ${nm}! 🌟 ${n1} ÷ ${n2} = ${res}. Barakalla! 👏`;
+          uzText = `${n1} ÷ ${n2} = ${res}`;
+        }
+        audioKey = "custom";
+        addAiMessage(reply, uzText, audioKey, true);
+        speakCustomText(reply);
+        return;
+      }
+
+      if (hasAdd || hasSub || hasMul || hasDiv || lower.includes("matematika") || lower.includes("hisob") || lower.includes("misol")) {
+        pendingQuiz = { type: 'math', num1: 5, num2: 5, op: '+', answer: 10, attempts: 0 };
+        reply = `Keling, birgalikda qiziqarli hisoblaymiz, ${nm}! 🍎 Tasavvur qiling: sizda 5 ta shirin olma bor edi. Do'stingiz sizga yana 5 ta olma sovg'a qildi! Qani o'ylab ko'ring-chi, endi sizda jami nechta olma bo'ladi? Necha deb o'ylaysiz? 😊`;
+        uzText = `O'ylab ko'ring: 5 + 5 = ?`;
+        audioKey = "math";
+        addAiMessage(reply, uzText, audioKey, true);
+        playStudioAudio(audioKey);
+        return;
+      }
+
+      // =========================================================================
+      // 4. TARBIYA / ODOB-AXLOQ
+      // =========================================================================
+      if (lower.includes("tarbiya") || lower.includes("odob") || lower.includes("axloq") || lower.includes("salom ber")) {
+        pendingQuiz = { type: 'tarbiya' };
+        reply = `Odobli bo'lish — eng buyuk fazilat, ${nm}! 🌟 Masalan, kattalarga har doim salom berish va ota-onaga yordam berish kerak! Siz ham ota-onangizga yordam berasizmi? 😊`;
+        uzText = `Odob-axloq va tarbiya`;
+        audioKey = "tarbiya";
+        addAiMessage(reply, uzText, audioKey, true);
+        playStudioAudio(audioKey);
+        return;
+      }
+
+      // =========================================================================
+      // 5. INGLIZ TILI (Umumiy dars)
+      // =========================================================================
+      if (lower.includes("ingliz") || lower.includes("english") || lower.includes("hello") || lower.includes("hi ")) {
+        reply = `Hello, ${nm}! 👋 Welcome to English! 🌟 Ingliz tilida qaysi so'zni o'rganmoqchisiz? Masalan: Olma, Kitob yoki Mushuk? Ayting! 😊`;
+        uzText = "Hello! Ingliz tilida so'zlar o'rganamiz!";
+        audioKey = "english";
+        addAiMessage(reply, uzText, audioKey, true);
+        playStudioAudio(audioKey);
+        return;
+      }
+
+      // =========================================================================
+      // 5. SALOM / QANDAYSAN
+      // =========================================================================
+      if (lower.includes("qalesan") || lower.includes("qandaysan") || lower.includes("qalaysan") || lower.includes("ahvol") || lower.includes("salom")) {
+        if (!childProfile.name) {
+          reply = `Assalomu alaykum, ${nm}! 🌟 Men juda zo'rman! Sizning ahvollaringiz qalay? 😊`;
+          childProfile.state = "waiting_for_name";
+          localStorage.setItem("chat_state", childProfile.state);
+        } else {
+          reply = `Assalomu alaykum, ${nm}! 🌟 Men juda zo'rman! Sizning ahvollaringiz qalay? 😊`;
+        }
+        audioKey = "qalesan";
+      }
+      // =========================================================================
+      // 6. YAXSHI / ZO'R
+      // =========================================================================
+      else if (lower === "yaxshi" || lower === "zo'r" || lower === "zor" || lower.includes("juda yaxshi") || lower.includes("tuzuk") || lower.includes("yaxshim")) {
+        if (!childProfile.name) {
+          reply = `Kayfiyatingiz a'lo ekanidan juda xursandman, ${nm}! 🌟 Keling, birgalikda matematika, ingliz tili yoki odob-axloqni o'rganamiz! 😊`;
+          childProfile.state = "waiting_for_name";
+          localStorage.setItem("chat_state", childProfile.state);
+        } else if (!childProfile.grade) {
+          reply = `Tanishganimdan juda xursandman, ${nm}! 🌟 Ismingiz judayam chiroyli ekan! Nechanchi sinfda o'qiysiz? 😊`;
+          childProfile.state = "waiting_for_grade";
+          localStorage.setItem("chat_state", childProfile.state);
+          audioKey = "name_ask";
+        } else {
+          reply = `Kayfiyatingiz a'lo ekanidan juda xursandman, ${nm}! 🌟 Keling, birgalikda matematika, ingliz tili yoki odob-axloqni o'rganamiz! 😊`;
+          audioKey = "mood_good";
+        }
+      }
+      // =========================================================================
+      // 7. ISM BILDIRILGANDA
+      // =========================================================================
+      else if (childProfile.state === "waiting_for_name" || lower.includes("ismim") || lower.includes("otim") || lower.startsWith("mening ismim")) {
+        let name = clean;
+        const m = clean.match(/(?:ismim|otim|men)\s+([a-zA-ZʻʼA-Z]+)/i);
+        if (m && m[1]) name = m[1];
+        else name = clean.replace(/ismim|otim|mening/gi, "").trim();
+        if (name.length > 1) {
+          childProfile.name = name.charAt(0).toUpperCase() + name.slice(1);
+          localStorage.setItem("child_name", childProfile.name);
+        }
+        childProfile.state = "waiting_for_grade";
+        localStorage.setItem("chat_state", childProfile.state);
+        reply = `Tanishganimdan juda xursandman, ${childProfile.name || "do'stim"}! 🌟 Ismingiz judayam chiroyli ekan! Nechanchi sinfda o'qiysiz? 😊`;
+        audioKey = "name_ask";
+      }
+      // =========================================================================
+      // 8. SINF BILDIRILGANDA
+      // =========================================================================
+      else if (childProfile.state === "waiting_for_grade" || lower.includes("sinf") || lower.includes("bog'cha")) {
+        const numMatch = clean.match(/([1-9]|1[0-1])/);
+        if (numMatch) {
+          childProfile.grade = numMatch[1] + "-sinf";
+          localStorage.setItem("child_grade", childProfile.grade);
+        } else {
+          childProfile.grade = clean;
+        }
+        childProfile.state = "ready";
+        localStorage.setItem("chat_state", childProfile.state);
+        reply = `Barakalla, ${childProfile.name || "do'stim"}! 🎉 Juda aqlli o'quvchi ekansiz! Keling, birgalikda 5 ga 5 ni qo'shishni o'rganamiz! 🚀`;
+        audioKey = "grade_response";
+      }
+      // =========================================================================
+      // 9. 8 TA SAYYORA
+      // =========================================================================
+      else if (lower.includes("sayyora") || lower.includes("koinot") || lower.includes("planets") ||
+               lower.includes("merkuriy") || lower.includes("venera") || lower.includes("yupiter") ||
+               lower.includes("saturn") || lower.includes("neptun") || lower.includes("uran") ||
+               (lower.includes("yer") && !lower.includes("yerd") && !lower.includes("yerg"))) {
+        if (lower.includes("yer")) {
+          reply = `Yer — AI Tutor sayyorasi, ${nm}! 🧠 Men bilan birgalikda kuniga 20 daqiqa o'rganamiz!`;
+          audioKey = "earth";
+        } else if (lower.includes("yupiter") || lower.includes("intizom")) {
+          reply = `Yupiter — Intizom sayyorasi, ${nm}! ⏰ Har kuni vazifalarni vaqtida bajaramiz!`;
+          audioKey = "jupiter";
+        } else if (lower.includes("venera")) {
+          reply = `Venera — Virtual do'kon, ${nm}! 🛍️ Bilim olib Gold Coin to'plang va sovg'alar oling!`;
+          audioKey = "venera";
+        } else if (lower.includes("saturn")) {
+          reply = `Saturn — Matematika va mantiq sayyorasi, ${nm}! ➕ Misollarni birga yechamiz!`;
+          audioKey = "saturn";
+        } else if (lower.includes("merkuriy")) {
+          reply = `Merkuriy — Kasblar va ijodkorlik sayyorasi, ${nm}! 🎨`;
+          audioKey = "merkuriy";
+        } else if (lower.includes("uran")) {
+          reply = `Uran — Ingliz tili lug'ati sayyorasi, ${nm}! 📚 So'zlarni birgalikda o'rganamiz!`;
+          audioKey = "uran";
+        } else if (lower.includes("mars")) {
+          reply = `Mars — Sport va jismoniy faollik sayyorasi, ${nm}! 💪 Har kuni chiniqamiz!`;
+          audioKey = "mars";
+        } else if (lower.includes("neptun")) {
+          reply = `Neptun — Emotsional his-tuyg'ular sayyorasi, ${nm}! 💙`;
+          audioKey = "neptune";
+        } else {
+          reply = `8 ta sayyorali ekotizim, ${nm}! 🪐 1 Yer — AI Tutor, 2 Yupiter — Intizom, 3 Venera — Do'kon, 4 Saturn — Matematika, 5 Merkuriy — Kasblar, 6 Uran — Ingliz tili, 7 Mars — Sport, 8 Neptun — Hissiyotlar! Qaysi biri haqida bilmoqchisiz? 😊`;
+          audioKey = "planets";
+        }
+      }
+      // =========================================================================
+      // 10. TARIX VA BUYUK AJDODLARIMIZ
+      // =========================================================================
+      else if (lower.includes("temur") || lower.includes("amir temur")) {
+        reply = `Amir Temur (1336–1405) — buyuk sarkarda va qudratli davlat asoschisi bo'lgan, ${nm}! 👑 Uning bosh shiori: "Kuch — adolatdadir!" deb nomlangan. Biz buyuk ajdodlarimiz bilan doim faxrlanamiz! 🌟`;
+        uzText = "Amir Temur — Buyuk Sarkarda";
+        audioKey = "custom";
+      }
+      else if (lower.includes("navoiy") || lower.includes("alisher navoiy")) {
+        reply = `Alisher Navoiy (1441–1501) — o'zbek tilining asoschisi, buyuk shoir va mutafakkir, ${nm}! 📜 U mashhur "Xamsa" (5 doston) asarini yozgan. Kitob o'qish insonni dono qiladi! 📚`;
+        uzText = "Alisher Navoiy — Buyuk Shoir";
+        audioKey = "custom";
+      }
+      else if (lower.includes("ulug'bek") || lower.includes("ulugbek") || lower.includes("mirzo ulug")) {
+        reply = `Mirzo Ulug'bek (1394–1449) — buyuk astronom olim va hukmdor bo'lgan, ${nm}! 🔭 Samarqandda ulkan rasadxona qurib, 1018 ta yulduzning aniq xaritasini tuzgan! 🪐`;
+        uzText = "Mirzo Ulug'bek — Astronom Olim";
+        audioKey = "custom";
+      }
+      else if (lower.includes("ibn sino") || lower.includes("avitsenna") || lower.includes("shifokor") || lower.includes("tabib")) {
+        reply = `Abu Ali ibn Sino (Avitsenna) — jahon tibbiyotining asoschisi va buyuk tabib, ${nm}! 🩺 U "Tib qonunlari" kitobini yozgan. Har doim sog'lom bo'lish uchun to'g'ri ovqatlanish kerak! 🍎`;
+        uzText = "Ibn Sino — Buyuk Tabib";
+        audioKey = "custom";
+      }
+      else if (lower.includes("xorazmiy") || lower.includes("al-xorazmiy") || lower.includes("algebra")) {
+        reply = `Muhammad al-Xorazmiy — dunyoga 'Algebra' fani va 'Algoritm' tushunchasini bergan buyuk matematik allomamiz, ${nm}! 📐 Matematika barcha fanlarning kalitidir! 🔢`;
+        uzText = "Al-Xorazmiy — Matematika Asoschisi";
+        audioKey = "custom";
+      }
+
+      // =========================================================================
+      // 11. TABIATSHUNOSLIK VA BIOLOGIYA
+      // =========================================================================
+      else if (lower.includes("fasl") || lower.includes("bahor") || lower.includes("yoz") || lower.includes("kuz") || lower.includes("qish")) {
+        reply = `Bir yilda 4 ta ajoyib fasl bor, ${nm}! 🌸 Bahor — gullar ochiladi, ☀️ Yoz — quyoshli va mevalar pishadi, 🍂 Kuz — hosil yig'iladi, ❄️ Qish — oppoq qor yog'adi! Siz qaysi faslni yoqtirasiz? 😊`;
+        uzText = "4 Fasl: Bahor, Yoz, Kuz, Qish";
+        audioKey = "custom";
+      }
+      else if (lower.includes("fotosintez") || lower.includes("daraxt") || lower.includes("o'simlik") || lower.includes("kislorod")) {
+        reply = `O'simliklar va daraxtlar Quyosh nuri orqali bizga toza kislorod (havo) beradi, ${nm}! 🌳 Bu jarayon fotosintez deyiladi. Shuning uchun tabiatni asrash va ko'chat ekish juda muhim! 🌱`;
+        uzText = "Tabiat va Kislorod";
+        audioKey = "custom";
+      }
+      else if (lower.includes("suv") && (lower.includes("holat") || lower.includes("muz") || lower.includes("bug"))) {
+        reply = `Suv tabiatda 3 xil holatda bo'ladi, ${nm}: 💧 Suyuq suv, 🧊 Qattiq muz, 💨 Va gazsimon bug'! Suv — hayot manbaidir!`;
+        uzText = "Suvning 3 holati: Suyuq, Muz, Bug'";
+        audioKey = "custom";
+      }
+
+      // =========================================================================
+      // 12. GEOGRAFIYA
+      // =========================================================================
+      else if (lower.includes("o'zbekiston") || lower.includes("ozbekiston") || lower.includes("vatan") || lower.includes("toshkent")) {
+        reply = `O'zbekiston — bizning go'zal va jonajon Vatanimiz, ${nm}! 🇺🇿 Poytaxtimiz — Toshkent shahri. O'zbekistonda 12 ta viloyat va Qoraqalpog'iston Respublikasi bor! 🌟`;
+        uzText = "O'zbekiston — Go'zal Vatanimiz";
+        audioKey = "custom";
+      }
+      else if (lower.includes("qit'a") || lower.includes("okean") || lower.includes("dunyo")) {
+        reply = `Dunyoda 6 ta qit'a (Yevrosiyo, Afrika, Shimoliy Amerika, Janubiy Amerika, Avstraliya, Antarktida) va 4 ta ulkan okean bor, ${nm}! 🌍 Eng katta okean — Tinch okeanidir! 🌊`;
+        uzText = "Dunyo Qit'alari va Okeanlar";
+        audioKey = "custom";
+      }
+
+      // =========================================================================
+      // 13. ONA TILI VA ALIFBO
+      // =========================================================================
+      else if (lower.includes("unli") || lower.includes("undosh") || lower.includes("alifbo") || lower.includes("harf")) {
+        reply = `O'zbek alifbosida 29 ta harf va bitta tutuq belgisi bor, ${nm}! 🔤 Bulardan 6 tasi unli tovushlar (A, O, I, U, E, O'), 23 tasi esa undosh tovushlardir! 📖`;
+        uzText = "Alifbo: 6 unli va 23 undosh tovush";
+        audioKey = "custom";
+      }
+
+      // =========================================================================
+      // 14. SPORT VA SALOMATLIK
+      // =========================================================================
+      else if (lower.includes("sport") || lower.includes("salomat") || lower.includes("mashq") || lower.includes("badantarbiya")) {
+        reply = `Sport va ertalabki badantarbiya insonni baquvvat, sog'lom va aqlli qiladi, ${nm}! 💪 Har kuni ertalab 10 daqiqa mashq qilib, mevalar yeb turish juda foydali! 🏃‍♂️`;
+        uzText = "Sog'lom turmush tarzi va Sport";
+        audioKey = "custom";
+      }
+
+      // =========================================================================
+      // 15. TOPISHMOQ
+      // =========================================================================
+      else if (lower.includes("topishmoq") || lower.includes("topish")) {
+        pendingQuiz = { type: 'riddle', answer: 'oy' };
+        reply = `Topishmoq aytaman, toping-chi, ${nm}: Kunduzi uxlaydi, kechasi nur sochadi? Bu nima bo'lishi mumkin? Qani o'ylab ko'ring-chi! 🌙`;
+        uzText = "Javob: Oy (Moon)!";
+        audioKey = "riddle";
+      }
+      // =========================================================================
+      // 16. RAHMAT / XAYR
+      // =========================================================================
+      else if (lower.includes("rahmat") || lower.includes("tashakkur")) {
+        reply = `Arzimaydi, aziz ${nm}! 🌟 Sizga bilim berishdan juda xursandman! Yana biror fan yoki mavzudan savol beraymi? 😊`;
+        audioKey = "thanks";
+      }
+      else if (lower.includes("xayr") || lower.includes("bye") || lower.includes("ko'rishguncha")) {
+        reply = `Xayr, aziz ${nm}! 👋 Ko'rishguncha! O'qishlaringizda katta omadlar tilayman! 🌟`;
+        audioKey = "goodbye";
+      }
+      // =========================================================================
+      // 17. BOSHQA BARCHA SO'ROVLAR
+      // =========================================================================
+      else {
+        pendingQuiz = { type: 'math', num1: 5, num2: 5, op: '+', answer: 10, attempts: 0 };
+        reply = `Men sizni diqqat bilan eshityapman, ${nm}! 🌟 Matematika, Ingliz tili, Tarix, Astronomiya yoki Tabiatdan qaysi mavzuda suhbatlashamiz? Ayting! 😊`;
+        audioKey = "general";
+      }
+
+      addAiMessage(reply, uzText, audioKey, true);
+      playStudioAudio(audioKey);
+    }
+
+
+
+
+    // Mukammal Ovoz Yozish (1 dan 30 sekundgacha sanash bilan)
+    let isRecording = false;
+    let recognition = null;
+    let currentFinalTranscript = "";
+    let currentInterimTranscript = "";
+    let mediaStream = null;
+    let recordingTimer = null;
+    let recordingSecondsElapsed = 0;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function initRecognition(langCode = 'uz-UZ') {
+      if (!SpeechRecognition) return null;
+      try {
+        const rec = new SpeechRecognition();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.maxAlternatives = 3;
+        rec.lang = langCode;
+
+        rec.onresult = (event) => {
+          let interim = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const trans = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              currentFinalTranscript += " " + trans;
+            } else {
+              interim += " " + trans;
+            }
+          }
+          currentInterimTranscript = interim;
+        };
+
+        rec.onerror = (event) => {
+          console.warn("Speech error:", event.error);
+          if (event.error === 'language-not-supported' && langCode === 'uz-UZ') {
+            recognition = initRecognition('ru-RU');
+          }
+        };
+
+        rec.onend = () => {
+          if (isRecording) {
+            try {
+              rec.start();
+            } catch(e) {}
+          }
+        };
+
+        return rec;
+      } catch (e) {
+        console.warn("SpeechRecognition init error:", e);
+        return null;
+      }
+    }
+
+    recognition = initRecognition('uz-UZ');
+
+    function toggleVoiceInput() {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    }
+
+    function startRecording() {
+      stopAllSpeech();
+      currentFinalTranscript = "";
+      currentInterimTranscript = "";
+      recordingSecondsElapsed = 1;
+
+      isRecording = true;
+      const micBtn = document.getElementById('micBtn');
+      const waveBars = document.getElementById('waveBars');
+      const pulseRing = document.getElementById('pulseRing');
+
+      micBtn.classList.add('recording');
+      waveBars.classList.add('active');
+      pulseRing.classList.add('active');
+      document.getElementById('micStatus').textContent = `Sizni tinglayapman... (01/30) 🎙️`;
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+
+      if (recognition) {
+        try {
+          recognition.start();
+        } catch(e) {
+          console.warn("recognition start error", e);
+        }
+      }
+
+      // 01/30 dan 30/30 gacha oldinga sanash taymeri
+      clearInterval(recordingTimer);
+      recordingTimer = setInterval(() => {
+        recordingSecondsElapsed++;
+        if (recordingSecondsElapsed <= 30) {
+          const formattedTime = String(recordingSecondsElapsed).padStart(2, '0') + '/30';
+          document.getElementById('micStatus').textContent = `Sizni tinglayapman... (${formattedTime}) 🎙️`;
+        } else {
+          // 30 sekund to'ldi — to'xtatamiz
+          clearInterval(recordingTimer);
+          stopRecording();
+        }
+      }, 1000);
+    }
+
+    function stopRecording() {
+      clearInterval(recordingTimer);
+      if (!isRecording) return;
+      isRecording = false;
+
+      if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+      }
+
+      const heard = (currentFinalTranscript + " " + currentInterimTranscript).trim();
+      stopRecordingUI();
+      if (heard) {
+        addUserMessage(heard);
+      } else {
+        document.getElementById('micStatus').textContent = "Ovoz eshitilmadi. Qayta bosing yoki yozing! 🎙️";
+        setTimeout(() => {
+          if (!isRecording) document.getElementById('micStatus').textContent = "Gapirish uchun bosing 🎙️";
+        }, 3500);
+      }
+    }
+
+    function stopRecordingUI() {
+      isRecording = false;
+      clearInterval(recordingTimer);
+      const micBtn = document.getElementById('micBtn');
+      const waveBars = document.getElementById('waveBars');
+      const pulseRing = document.getElementById('pulseRing');
+
+      micBtn.classList.remove('recording');
+      waveBars.classList.remove('active');
+      pulseRing.classList.remove('active');
+      document.getElementById('micStatus').textContent = "Gapirish uchun bosing 🎙️";
+    }
+
+    // AI Ovozini boshqarish
+    function stopAllSpeech() {
+      if (activeAudioElement) {
+        activeAudioElement.pause();
+        activeAudioElement.currentTime = 0;
+        activeAudioElement = null;
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isCurrentlySpeaking = false;
+      document.getElementById('stopVoiceBtn').classList.remove('active');
+      if (currentPlayingBtn) {
+        currentPlayingBtn.classList.remove('playing');
+        currentPlayingBtn = null;
+      }
+    }
+
+    function togglePlayAudio(audioKey, btnId, customText = "") {
+      if (isCurrentlySpeaking && currentPlayingBtn?.id === btnId) {
+        stopAllSpeech();
+        return;
+      }
+      if (audioKey === 'custom') {
+        speakCustomText(customText, btnId);
+      } else {
+        playStudioAudio(audioKey, btnId);
+      }
+    }
+
+    function speakCustomText(text, btnId = null) {
+      stopAllSpeech();
+      if (!('speechSynthesis' in window)) return;
+      const cleanText = text.replace(/[*_~`#🍎🖐️🌟😊👏💙🪐🎨📚💪👋✨🎙️👂]/g, '').trim();
+      const utter = new SpeechSynthesisUtterance(cleanText);
+      utter.lang = 'uz-UZ';
+      utter.rate = 0.95;
+      utter.pitch = 1.05;
+
+      utter.onstart = () => {
+        isCurrentlySpeaking = true;
+        document.getElementById('stopVoiceBtn').classList.add('active');
+        if (btnId) {
+          const btn = document.getElementById(btnId);
+          if (btn) {
+            btn.classList.add('playing');
+            currentPlayingBtn = btn;
+          }
+        }
+      };
+      utter.onend = () => {
+        stopAllSpeech();
+      };
+      utter.onerror = () => {
+        stopAllSpeech();
+      };
+
+      window.speechSynthesis.speak(utter);
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    }
+
+    function playStudioAudio(audioKey, btnId = null) {
+      if (audioKey === 'custom') return;
+      stopAllSpeech();
+
+      const audioSrc = studioAudios[audioKey] || studioAudios['general'];
+      const audio = new Audio(audioSrc);
+      activeAudioElement = audio;
+
+      audio.play().then(() => {
+        isCurrentlySpeaking = true;
+        document.getElementById('stopVoiceBtn').classList.add('active');
+        if (btnId) {
+          const btn = document.getElementById(btnId);
+          if (btn) {
+            btn.classList.add('playing');
+            currentPlayingBtn = btn;
+          }
+        }
+      }).catch(err => {
+        console.log("Audio play err:", err);
+      });
+
+      audio.onended = () => {
+        stopAllSpeech();
+      };
+
+      audio.onerror = () => {
+        stopAllSpeech();
+      };
+
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    }
+
+    function toggleTranslation(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('show');
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    }
+  </script>
+</body>
+</html>

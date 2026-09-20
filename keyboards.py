@@ -5,7 +5,7 @@ from aiogram.types import (
     KeyboardButton,
     WebAppInfo
 )
-from locales import TEXTS, get_user_lang, get_user_age
+from locales import TEXTS, get_user_lang
 
 # Internetda jonli ishlayotgan Mini App HTTPS manzili
 DEFAULT_WEBAPP_URL = "https://kichikalloma-bot.surge.sh"
@@ -22,6 +22,13 @@ def get_main_keyboard(lang: str = "uz", webapp_url: str = None) -> ReplyKeyboard
             )
         ],
         [
+            KeyboardButton(text=t["btn_math"]),
+            KeyboardButton(text=t["btn_english"])
+        ],
+        [
+            KeyboardButton(text=t["btn_planets"])
+        ],
+        [
             KeyboardButton(text=t["btn_help"]),
             KeyboardButton(text=t["btn_settings"])
         ]
@@ -29,7 +36,7 @@ def get_main_keyboard(lang: str = "uz", webapp_url: str = None) -> ReplyKeyboard
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
         resize_keyboard=True,
-        input_field_placeholder="Kerakli bo'limni tanlang..."
+        input_field_placeholder=t.get("input_placeholder", "Savol yozing yoki bo'limni tanlang...")
     )
 
 def get_cancel_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
@@ -47,12 +54,12 @@ def get_cancel_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
 
 def get_settings_keyboard(user_id: int) -> InlineKeyboardMarkup:
     current_lang = get_user_lang(user_id)
-    current_age = get_user_age(user_id)
+    t = TEXTS.get(current_lang, TEXTS["uz"])
 
     def mark(cond: bool, label: str) -> str:
         return f"✅ {label}" if cond else label
 
-    # Faqat tillar va yosh toifalari (Sekin/Oddiy tezlik olib tashlandi)
+    # Faqat tillar bo'limi (Foydalanuvchi talabi: Yosh toifalari olib tashlandi, faqat tillar qoldirildi)
     keyboard = [
         [
             InlineKeyboardButton(
@@ -69,17 +76,7 @@ def get_settings_keyboard(user_id: int) -> InlineKeyboardMarkup:
             ),
         ],
         [
-            InlineKeyboardButton(
-                text=mark(current_age == "7-8", "🧒 7-8 yosh"),
-                callback_data="set_age:7-8"
-            ),
-            InlineKeyboardButton(
-                text=mark(current_age == "9-11", "👦 9-11 yosh"),
-                callback_data="set_age:9-11"
-            ),
-        ],
-        [
-            InlineKeyboardButton(text="🔙 Yopish", callback_data="close_settings")
+            InlineKeyboardButton(text=t.get("btn_close", "🔙 Yopish"), callback_data="close_settings")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
