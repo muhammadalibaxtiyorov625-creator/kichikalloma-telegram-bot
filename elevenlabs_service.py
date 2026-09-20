@@ -37,13 +37,39 @@ ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', 'sk_730428986b5e2df84bb1601
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audio_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-def sanitize_text_for_speech(text: str) -> str:
-    """HTML teglar va ortiqcha belgilarni tozalash, eng asosiy qismini olish"""
+def sanitize_text_for_speech(text: str, lang: str = "uz") -> str:
+    """
+    Ovoz uchun matnni tozalash:
+    - Barcha HTML teglar olib tashlanadi
+    - Barcha emoji va maxsus belgilar olib tashlanadi
+    - Qavs ichidagi talaffuz yo'riqnomalari olib tashlanadi: [heloʻu], [epl]
+    - Asterisk, o'q, iqtibos belgilari olib tashlanadi
+    - Faqat O'zbek ovozi bilan o'qiladigan matni qoldiradi
+    """
+    # 1. HTML teglarni olib tashlash
     clean = re.sub(r'<[^>]+>', '', text)
-    clean = re.sub(r'[🔢🎉✨💡🚀👏🗣️🇬🇧💖⭐🎯🆘ℹ️🔄🤖🪐🌍🔴🟡🔵🟠🟣]', '', clean)
-    clean = clean.replace('\n', ' ').strip()
-    if len(clean) > 400:
-        clean = clean[:400].rsplit(' ', 1)[0] + '!'
+    # 2. Barcha emoji va unicode maxsus belgilarni olib tashlash
+    clean = re.sub(
+        r'[\U0001F000-\U0001FFFF'
+        r'\U00002702-\U000027B0'
+        r'\U000024C2-\U0001F251'
+        r'\U0001f926-\U0001f937'
+        r'\u200d\u2640-\u2642'
+        r'\u2600-\u2B55'
+        r'\u23cf\u23e9\u231a\ufe0f\u3030]+',
+        '', clean, flags=re.UNICODE
+    )
+    # 3. Qavs ichidagi talaffuz yo'riqnomalarini olib tashlash: [heloʻu] [epl] [frend]
+    clean = re.sub(r'\[.*?\]', '', clean)
+    # 4. Raqamli ro'yxat belgisi (1. 2. 3.) ni tozalash
+    clean = re.sub(r'^\s*\d+\.\s*', '', clean, flags=re.MULTILINE)
+    # 5. Maxsus belgilarni tozalash
+    clean = re.sub(r'[•\*\-–—►▶→↓↑]', ' ', clean)
+    # 6. Ko'p bo'sh joy va yangi satrlarni birlashtirish
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    # 7. Maksimal uzunlik: 380 belgi
+    if len(clean) > 380:
+        clean = clean[:380].rsplit(' ', 1)[0] + '.'
     return clean
 
 def transcribe_voice(audio_file_path: str, lang: str = "uz") -> str:
@@ -107,25 +133,16 @@ def transcribe_voice(audio_file_path: str, lang: str = "uz") -> str:
     return None
 
 def generate_voice(text: str, output_path: str = 'javob.mp3', lang: str = 'uz') -> str:
-    """Matnni Microsoft Neural Edge-TTS orqali tilga mos sho'x, do'stona o'g'il bola ovoziga aylantirish"""
+    """Matnni Microsoft Neural Edge-TTS orqali FAQAT O'zbek SardorNeural ovoziga aylantirish"""
     try:
-        clean_text = sanitize_text_for_speech(text)
-        if not clean_text:
-            clean_text = "Salom, do'stim! Sizga yordam berishdan xursandman." if lang == "uz" else ("Привет, друг! Рад помочь тебе." if lang == "ru" else "Hello my friend! Happy to help you.")
+        clean_text = sanitize_text_for_speech(text, lang)
+        if not clean_text or len(clean_text.strip()) < 2:
+            clean_text = "Salom, do'stim! Sizga yordam berishdan xursandman."
 
-        # Tilga mos eng tabiiy va jarangdor o'g'il bola ovozi
-        if lang == "ru":
-            voice_name = "ru-RU-DmitryNeural"
-            pitch = "+5Hz"
-            rate = "+1%"
-        elif lang == "en":
-            voice_name = "en-US-AndrewNeural"
-            pitch = "+5Hz"
-            rate = "+1%"
-        else:
-            voice_name = "uz-UZ-SardorNeural"
-            pitch = "+12Hz"
-            rate = "+1%"
+        # FAQAT O'zbek Sardor ovozi — bitta, izchil, boy ovozi
+        voice_name = "uz-UZ-SardorNeural"
+        pitch = "+12Hz"
+        rate = "+2%"
 
         # 1. Tezkor kesh tekshiruvi
         text_hash = hashlib.md5(f"{lang}:{voice_name}:{clean_text}".encode('utf-8')).hexdigest()
