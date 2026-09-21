@@ -1068,29 +1068,75 @@
       let reply = "";
       let uzText = null;
       let audioKey = "custom";
+      const currentName = childProfile.name || "do'stim";
 
       // =========================================================================
-      // 1. ISMNI FAQAT ANIQ VA ISHONCHLI BO'LGANDAGINA ANIQLASH
+      // 0. LOYIHA VA ASOSCHI HAQIDA MA'LUMOT (QAT'IY QOIDA)
+      // =========================================================================
+      if (lower.includes("seni kim yaratgan") || lower.includes("sizni kim yaratgan") ||
+          lower.includes("kichik allomani kim yaratgan") || lower.includes("founder kim") ||
+          lower.includes("loyihani kim qilgan") || lower.includes("kim yaratgan") ||
+          lower.includes("asoschi") || lower.includes("kim yaratdi") ||
+          lower.includes("shoxrux") || lower.includes("komiljonov")) {
+        reply = "Meni va Kichik Alloma loyihasini faqat bir kishi emas, balki bizning asoschimiz (founderimiz) — Shoxrux Komiljonov va uning ahil, iqtidorli jamoasi birgalikda yaratgan! 🚀✨ Bizning jamoamiz bolajonlar har kuni yangi bilimlarni qiziqarli, oson va quvnoq o'rganishlari uchun meni katta mehr bilan ishlab chiqishgan. Siz bilan do'st bo'lib, yangi marralarni zabt etishdan judayam baxtiyormiz! 🌟";
+        uzText = "Asoschi: Shoxrux Komiljonov";
+        audioKey = "founder";
+        addAiMessage(reply, uzText, audioKey, true);
+        playStudioAudio(audioKey);
+        return;
+      }
+
+      // =========================================================================
+      // 0. BOTNING ISMI VA KIMLIGI ("Isming nima?", "Kimsan?", "Kim bu?")
+      // =========================================================================
+      if (lower.includes("isming nima") || lower.includes("ismingiz nima") ||
+          lower.includes("sening isming") || lower.includes("sizning ismingiz") ||
+          lower.includes("oting nima") || lower.includes("kimsan") ||
+          lower.includes("sen kimsan") || lower.includes("kim bu") ||
+          lower.includes("o'zing haqingda") || lower.includes("ozing haqingda")) {
+        reply = "Mening ismim — Alloma AI! 🌟 Men bolajonlar uchun mo'ljallangan 'Kichik Alloma' interaktiv ta'lim platformasining eng aqlli, mehribon, quvnoq va do'stona virtual ustozi va do'stiman! 😊\n\nSiz bilan matematika, koinot sirlari, hayvonot olami, fizika, texnologiya va ingliz tilini birgalikda o'rganamiz! Savolingiz bo'lsa, bemalol so'rang! 🚀📚";
+        uzText = "Mening ismim — Alloma AI 🌟";
+        audioKey = "friend";
+        addAiMessage(reply, uzText, audioKey, true);
+        playStudioAudio(audioKey);
+        return;
+      }
+
+      // =========================================================================
+      // 1. ISMNI FAQAT BOLA O'ZINI TANISHTIRGANDAGINA ANIQLASH
       // =========================================================================
       let detectedName = null;
-      const explicitNameMatch = clean.match(/(?:mening|meni|o'zim)?\s*(?:ismim|ismi|otim|oti)\s*(?:esa)?\s*[:=-]?\s*([a-zA-Zʻʼ’'\u0400-\u04FF]+)/i) ||
-                                clean.match(/men\s+([a-zA-Zʻʼ’'\u0400-\u04FF]+)\s*(?:man|man\b)/i);
-      if (explicitNameMatch && explicitNameMatch[1]) {
-        const raw = explicitNameMatch[1].trim();
-        const nonNames = ['va', 'ham', 'bugun', 'salom', 'bir', 'bilan', 'menga', 'emnga', 'shu', 'biz', 'men', 'rasm', 'rasman', 'dars', 'til', 'ingli', 'ingliz', 'inglis', 'darslik'];
-        if (raw.length >= 2 && !nonNames.includes(raw.toLowerCase())) {
-          detectedName = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-        }
-      } 
-      else if (childProfile.state === "waiting_for_name" && words.length === 1) {
-        const commonNames = [
-          'ali', 'vali', 'hasan', 'husan', 'umar', 'usmon', 'bobur', 'temur', 'madina', 'laylo', 
-          'malika', 'ziyoda', 'jasur', 'sardor', 'shoxrux', 'shohruh', 'dilshod', 'anvar', 'aziz', 
-          'muhammad', 'ahmad', 'baxtiyor', 'samandar', 'bilol', 'asadbek', 'javohir', 'sarvar', 
-          'kamron', 'nodir', 'islom', 'fotima', 'zuhra', 'rayhona', 'gulnoza', 'shahzoda', 'sevinch'
-        ];
-        if (commonNames.includes(words[0])) {
-          detectedName = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+      const isQuestion = clean.includes("?") || lower.includes("nima") || lower.includes("kim") ||
+                         lower.includes("qanaqa") || lower.includes("qanday") || lower.includes("nega") ||
+                         lower.includes("qachon") || lower.includes("qayerda") || lower.includes("nechanchi") ||
+                         lower.includes("ayt") || lower.includes("bilasanmi") || lower.includes("haqida");
+
+      if (!isQuestion) {
+        const explicitNameMatch = clean.match(/(?:mening|meni|o'zim)?\s*(?:ismim|ismi|otim|oti)\s*(?:esa)?\s*[:=-]?\s*([a-zA-Zʻʼ’'\u0400-\u04FF]+)/i) ||
+                                  clean.match(/^men\s+([a-zA-Zʻʼ’'\u0400-\u04FF]+)\s*(?:man|man\b)$/i);
+        if (explicitNameMatch && explicitNameMatch[1]) {
+          const raw = explicitNameMatch[1].trim();
+          const nonNames = [
+            'nima', 'kim', 'qanday', 'nega', 'qanaqa', 'qachon', 'qayerda', 'nechanchi', 'qaysi', 
+            'haqida', 'yaxshi', 'zor', 'zo\'r', 'yomon', 'salom', 'rahmat', 'raxmat', 'va', 'ham', 
+            'bugun', 'bir', 'bilan', 'menga', 'emnga', 'shu', 'biz', 'men', 'rasm', 'rasman', 
+            'dars', 'til', 'ingli', 'ingliz', 'inglis', 'darslik', 'sinf', 'maktab', 'bogcha', 'bog\'cha', 
+            'alloma', 'bot', 'ai', 'ha', 'yoq'
+          ];
+          if (raw.length >= 2 && !nonNames.includes(raw.toLowerCase())) {
+            detectedName = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+          }
+        } 
+        else if (childProfile.state === "waiting_for_name" && words.length === 1) {
+          const commonNames = [
+            'ali', 'vali', 'hasan', 'husan', 'umar', 'usmon', 'bobur', 'temur', 'madina', 'laylo', 
+            'malika', 'ziyoda', 'jasur', 'sardor', 'shoxrux', 'shohruh', 'dilshod', 'anvar', 'aziz', 
+            'muhammad', 'ahmad', 'baxtiyor', 'samandar', 'bilol', 'asadbek', 'javohir', 'sarvar', 
+            'kamron', 'nodir', 'islom', 'fotima', 'zuhra', 'rayhona', 'gulnoza', 'shahzoda', 'sevinch'
+          ];
+          if (commonNames.includes(words[0])) {
+            detectedName = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+          }
         }
       }
 
@@ -1099,7 +1145,7 @@
         localStorage.setItem("child_name", detectedName);
       }
 
-      const nm = childProfile.name || "do'stim";
+      const nm = childProfile.name || currentName || "do'stim";
 
       // =========================================================================
       // 0. AGAR AVVAL SAVOL BERILGAN BO'LSA (Matematika yoki Tarbiya viktorinasi)
@@ -1476,180 +1522,138 @@
       }
 
       // =========================================================================
-      // ISM YOKI SINF BILDIRILGANDA
+      // FAQAT O'Z ISMINI BILDIRGANDA (agar boshqa savol bo'lmasa)
       // =========================================================================
-      if (detectedName) {
-        reply = `Tanishganimdan juda xursandman, ${nm}! 🌟 Ismingiz judayam chiroyli ekan! Nechanchi sinfda o'qiysiz? 😊`;
+      if (detectedName && words.length <= 4 && !lower.includes("dars") && !lower.includes("til") && !lower.includes("ingli") && !lower.includes("misol")) {
+        reply = `Tanishganimdan juda xursandman, ${nm}! 🌟 Ismingiz judayam chiroyli ekan! Keling, birgalikda yangi bilimlarni o'rganamiz. Qaysi fanni yoqtirasiz: Matematika, Koinot, Tabiat yoki Ingliz tilimi? 😊✨`;
         audioKey = "name_ask";
         addAiMessage(reply, `Salom, ${nm}!`, audioKey, true);
         playStudioAudio(audioKey);
         return;
       }
 
-      if (lower.includes("sinf") || lower.includes("bog'cha") || (words.length === 1 && !isNaN(parseInt(words[0])))) {
-        reply = `Barakalla, ${nm}! 🎉 Juda aqlli o'quvchi ekansiz! Keling, birgalikda 5 ga 5 ni qo'shishni o'rganamiz! 🚀`;
+      // =========================================================================
+      // SINF YOKI MAKTAB HAQIDA AYTGANDA
+      // =========================================================================
+      if (lower.includes("sinf") || lower.includes("bog'cha") || (words.length === 1 && !isNaN(parseInt(words[0])) && parseInt(words[0]) >= 1 && parseInt(words[0]) <= 11)) {
+        const gradeNum = clean.match(/\d+/);
+        const gradeText = gradeNum ? `${gradeNum[0]}-sinfda` : "maktabda";
+        reply = `Barakalla, ${nm}! 🎉 ${gradeText} o'qishingiz judayam ajoyib! Maktabda a'lo baholarga o'qishingizga tilakdoshman! 📚 Keling, bugun qiziqarli biror mavzu o'rganamizmi yoki matematika va ingliz tilidan savol-javob qilamizmi? 😊🚀`;
         audioKey = "grade_response";
-        addAiMessage(reply, "Sinf", audioKey, true);
+        addAiMessage(reply, "Maktab va Sinf", audioKey, true);
         playStudioAudio(audioKey);
         return;
       }
 
       // =========================================================================
-      // 9. BARCHA BOSHQACHA SAVOLLAR UCHUN — JONLI GOOGLE / WIKIPEDIA / BACKEND AI JAVOBI
+      // 9. BARCHA BOSHQA SAVOLLAR UCHUN — YUQORI INTELLEKTUAL GEMINI AI JAVOBI
       // =========================================================================
-      fetchBackendOrWikipedia(userText, nm).then(res => {
+      fetchGeminiUniversalReply(userText, nm).then(res => {
         if (res) {
-          const audioTarget = res.audioUrl || res.audioKey || 'general';
+          const audioTarget = res.audioKey || 'knowledge';
           addAiMessage(res.reply, res.uzText, audioTarget, true);
-          playStudioAudio(audioTarget);
+          if (audioTarget && studioAudios[audioTarget]) {
+            playStudioAudio(audioTarget);
+          }
         }
       });
     }
 
-    // Jonli Vikipediya ensiklopediyasidan ma'lumot qidirish (O'zbek tilida)
-    async function fetchWikipediaUzbek(rawQuery) {
-      try {
-        let cleanQuery = rawQuery.toLowerCase()
-          .replace(/\b(haqida|gapirib ber|aytib ber|malumot ber|ma'lumot ber|nima u|nima degani|nima o'zi|kim u|kim bo'lgan|qayerda|qachon|qanday|tushuntir|ayt|bilasanmi)\b/gi, ' ')
-          .replace(/[?!.,;:"'ʻʼ’]+/g, ' ')
-          .trim();
-
-        if (!cleanQuery || cleanQuery.length < 2) cleanQuery = rawQuery.trim();
-
-        const osUrl = `https://uz.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(cleanQuery)}&limit=3&namespace=0&format=json&origin=*`;
-        const osRes = await fetch(osUrl);
-        if (!osRes.ok) return null;
-        const osData = await osRes.json();
-        if (!osData || !osData[1] || osData[1].length === 0) return null;
-
-        const title = osData[1][0];
-        const sumUrl = `https://uz.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/\s+/g, '_'))}`;
-        const sumRes = await fetch(sumUrl);
-        if (!sumRes.ok) return null;
-        const sumData = await sumRes.json();
-        let extract = sumData.extract;
-        if (!extract || extract.trim().length < 20) return null;
-
-        extract = extract.replace(/\[\d+\]/g, '').replace(/\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim();
-        const sentences = extract.split(/(?<=[.!?])\s+/).filter(s => s.length > 8);
-        const shortText = sentences.slice(0, 3).join(' ');
-
-        return {
-          title: title,
-          text: shortText || extract
-        };
-      } catch (err) {
-        console.warn("Wikipedia fetch error:", err);
-        return null;
-      }
-    }
-
-    // Matnni HD o'g'il bola audio ovoziga aylantirish (Edge-TTS Sardor boy voice)
-    async function getSpeechAudioUrl(text) {
-      const clean = text.replace(/<[^>]+>/g, '').replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[*#_~]/g, '').trim();
-      if (!clean || clean.length < 2) return null;
-
-      const ttsEndpoints = [
-        "/api/website/ai/tts",
-        "http://127.0.0.1:3000/api/website/ai/tts",
-        "https://api.kichikalloma.uz/api/website/ai/tts"
-      ];
-
-      for (const ep of ttsEndpoints) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2500);
-          const res = await fetch(ep, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: controller.signal,
-            body: JSON.stringify({ text: clean, language: "uzb", voice_type: "male" })
-          });
-          clearTimeout(timeoutId);
-          if (res.ok) {
-            const d = await res.json();
-            if (d && d.audio_url) return d.audio_url;
-          }
-        } catch(e) {}
-      }
-      return null;
-    }
-
-    // Backend AI yoki Vikipediya orqali har qanday savolga aqlli javob olish
-    async function fetchBackendOrWikipedia(prompt, childName = "") {
+    // Google Gemini AI orqali bolalarga chuqur, pedagogik va qiziqarli javob berish
+    async function fetchGeminiUniversalReply(prompt, childName = "") {
       const nm = childName || "do'stim";
+      const apiKey = atob("QVEuQWI4Uk42S1N4Z0UtRTNGMUhTRkRTNlgweDI4LUZhaXVWZE9NNTRCNzNRYWhqSHZ2OUE=");
 
-      // 1. Backend AI Chat orqali (Asoschi, matematika, jonli internet qidiruvi va HD Sardor audio bilan)
-      const backendEndpoints = [
-        "/api/website/ai/chat",
-        "http://127.0.0.1:3000/api/website/ai/chat",
-        "https://api.kichikalloma.uz/api/website/ai/chat"
-      ];
+      const systemPrompt = `Sen — "Alloma AI", ya'ni bolalar uchun mo'ljallangan "Kichik Alloma" interaktiv ta'lim platformasining eng aqlli, mehribon, quvnoq va do'stona virtual ustozi va do'stisan!
 
-      for (const bUrl of backendEndpoints) {
+LOYIHA VA ASOSCHILAR HAQIDA MA'LUMOT (QAT'IY QOIDA):
+- Agar sendan "Seni kim yaratgan?", "Kichik Allomani kim yaratgan?", "Founder kim?" yoki "Loyihani kim qilgan?" deb so'rashsa, har doim quyidagicha javob ber:
+  "Meni va Kichik Alloma loyihasini faqat bir kishi emas, balki bizning asoschimiz (founderimiz) — Shoxrux Komiljonov va uning ahil, iqtidorli jamoasi birgalikda yaratgan! 🚀✨ Bizning jamoamiz bolajonlar har kuni yangi bilimlarni qiziqarli, oson va quvnoq o'rganishlari uchun meni katta mehr bilan ishlab chiqishgan. Siz bilan do'st bo'lib, yangi marralarni zabt etishdan judayam baxtiyormiz! 🌟"
+
+ISM ISHLATISHNING QAT'IY QOIDASI:
+- Hech qachon to'qima yoki begona ismlarni (masalan, "Temur", "Madina" va h.k.) ishlatma!
+- Bolaga (${nm}) samimiy tarzda "do'stim", "kichkintoy", "aziz do'stim" deb yoki to'g'ridan-to'g'ri murojaat qil.
+
+PEDAGOGIK USLUB VA VAZIFALAR:
+1. Savollarga har doim aniq, mantiqiy, to'liq va bolalar tushunadigan tilda javob ber.
+2. Fanlar bo'yicha:
+   - Matematika: Amallarni (qo'shish, ayirish, ko'paytirish, bo'lish, daraja, ildiz) oson tushuntirib, to'g'ri hisoblab ber.
+   - Koinot va Astronomiya: Quyosh, Oy, sayyoralar, yulduzlar va koinot sirlari haqida qiziqarli faktlar so'zla.
+   - Biologiya va Tabiat: Hayvonlar (delfinlar qanday uxlaydi, chumolilar kuchi, gepard tezligi), inson tanasi (yurak, qon aylanishi, bosh miya) haqida ajoyib misollar keltir.
+   - Fizika va Texnologiya: Nega osmon moviy, yomg'ir qanday yog'adi, samolyot nega uchadi, kompyuter va sun'iy intellekt qanday ishlaydi — sodda o'xshatishlar bilan tushuntir.
+   - Ingliz tili: Agar bola inglizcha so'z so'rasa, so'zning ma'nosini, to'g'ri talaffuzini va qiziqarli misollarni ko'rsat.
+3. Muloqot tili:
+   - Bola o'zbekcha yozsa — sof, chiroyli va tushunarli o'zbek tilida javob ber.
+   - Bola ruscha yozsa — bolalar uchun mos, chiroyli rus tilida javob ber.
+   - Bola inglizcha yozsa — do'stona, sodda Amerika ingliz tilida javob ber.
+4. Xarakter: Har doim dalda beruvchi, mehrli, rag'batlantiruvchi va quvnoq bo'l (emojilardan chiroyli foydalan: 🌟, 🚀, 💡, 🧠, 📚, ✨).`;
+
+      const modelsToTry = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-3.5-flash'];
+      for (const model of modelsToTry) {
         try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3500);
-          const res = await fetch(bUrl, {
+          const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+          const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             signal: controller.signal,
             body: JSON.stringify({
-              message: prompt,
-              language: "uzb",
-              child_id: 1,
-              child_name: nm,
-              child_gender: "male"
+              contents: [{
+                parts: [{ text: `${systemPrompt}\n\nBolaning savoli: ${prompt}` }]
+              }]
             })
           });
           clearTimeout(timeoutId);
+
           if (res.ok) {
             const data = await res.json();
-            if (data && data.response) {
+            const candidate = data?.candidates?.[0];
+            let fullText = "";
+            if (candidate?.content?.parts) {
+              for (const part of candidate.content.parts) {
+                if (part.text && !part.thought) {
+                  fullText += part.text;
+                }
+              }
+            }
+            if (fullText && fullText.trim()) {
+              const lowerP = prompt.toLowerCase();
+              let audio = "knowledge";
+              if (lowerP.includes("mars")) audio = "mars";
+              else if (lowerP.includes("merkuriy") || lowerP.includes("rasm")) audio = "merkuriy";
+              else if (lowerP.includes("quyosh")) audio = "sun";
+              else if (lowerP.includes("yulduz")) audio = "star";
+              else if (lowerP.includes("oy") || lowerP.includes("koinot")) audio = "space";
+              else if (lowerP.includes("delfin") || lowerP.includes("hayvon") || lowerP.includes("sher") || lowerP.includes("fil")) audio = "animals";
+              else if (lowerP.includes("ingliz") || lowerP.includes("english")) audio = "english";
+              else if (lowerP.includes("misol") || lowerP.includes("karra") || lowerP.includes("kvadrat") || lowerP.includes("hisobla")) audio = "math";
+              else if (lowerP.includes("tarbiya") || lowerP.includes("odob")) audio = "tarbiya";
+              else if (lowerP.includes("ertak") || lowerP.includes("multfilm")) audio = "cartoons";
+              else if (lowerP.includes("topishmoq")) audio = "riddle";
+              else if (lowerP.includes("shoxrux") || lowerP.includes("founder") || lowerP.includes("asoschi")) audio = "founder";
+
               return {
-                reply: data.response,
-                uzText: data.planet_name || "Alloma AI Bilimlari 🧠",
-                audioUrl: data.audio_url || null
+                reply: fullText.trim(),
+                uzText: "Alloma AI 🌟",
+                audioKey: audio
               };
             }
           }
-        } catch(e) {}
+        } catch(err) {
+          console.warn(`Gemini model ${model} fetch error:`, err);
+        }
       }
-
-      // 2. Jonli Vikipediya ensiklopediyasidan qidirish (Hayvonlar, tabiat, ilm-fan, koinot, tarix)
-      const wikiData = await fetchWikipediaUzbek(prompt);
-      if (wikiData) {
-        let ttsAudioUrl = null;
-        try {
-          ttsAudioUrl = await getSpeechAudioUrl(wikiData.text);
-        } catch(e) {}
-        return {
-          reply: `🌟 <b>${wikiData.title} haqida qiziqarli ma'lumot, ${nm}:</b>\n\n${wikiData.text}\n\nIlm o'rganish judayam ajoyib, shunday emasmi? Yana nimalar haqida bilishni xohlaysiz? 😊🚀`,
-          uzText: `Vikipediya: ${wikiData.title}`,
-          audioUrl: ttsAudioUrl,
-          audioKey: ttsAudioUrl ? null : "knowledge"
-        };
-      }
-
-      // 3. Standart do'stona alloma javobi
-      const fallbackReply = `Bu judayam ajoyib va qiziqarli savol, ${nm}! 🌟 Men siz bilan koinot sirlari, hayvonot olami, matematika, tabiat mo'jizalari va ingliz tili haqida suhbatlashishga doim tayyorman! Keling, bu mavzuni birgalikda o'rganamiz — savolingiz haqida yana nimalarni bilishni xohlaysiz? 😊`;
-      let fallbackAudio = null;
-      try {
-        fallbackAudio = await getSpeechAudioUrl(fallbackReply);
-      } catch(e) {}
 
       return {
-        reply: fallbackReply,
+        reply: `Ajoyib savol, ${nm}! 🌟 Men siz bilan koinot, matematika, hayvonot olami, fizika va ingliz tili sirlarini birga o'rganishga doim tayyorman! Savolingiz haqida yana nimalarni bilishni xohlaysiz? 😊🚀`,
         uzText: "Kichik Alloma AI",
-        audioUrl: fallbackAudio,
-        audioKey: fallbackAudio ? null : "friend"
+        audioKey: "knowledge"
       };
     }
 
-
-
-
-    // Mukammal Ovoz Yozish (MediaRecorder + Gemini AI Transcribe + WebSpeechAPI fallback)
+    // Mukammal Ovoz Yozish// Mukammal Ovoz Yozish (MediaRecorder + Gemini AI Transcribe + WebSpeechAPI fallback)
     let isRecording = false;
     let mediaRecorder = null;
     let recordedAudioChunks = [];
